@@ -1,0 +1,37 @@
+<?php
+defined('NX_ROOT') || exit;
+return [
+    'table' => 'deals', 'label' => 'Deals', 'singular' => 'Deal', 'module' => 'deals', 'icon' => 'handshake', 'group' => 'Sales',
+    'title' => 'name', 'subtitle' => 'customer_id', 'board' => 'stage_id', 'default_view' => 'board', 'default_sort' => ['created_at', 'desc'],
+    'search' => ['name', 'next_step', 'competitor'],
+    'quick' => ['name', 'customer_id', 'amount', 'pipeline_id', 'stage_id', 'expected_close', 'assigned_to'],
+    'fields' => [
+        'name' => ['type' => 'text', 'label' => 'Deal name', 'required' => true, 'list' => true, 'group' => 'Deal'],
+        'customer_id' => ['type' => 'relation', 'relation' => 'customers', 'label' => 'Customer', 'list' => true, 'filter' => true, 'group' => 'Deal'],
+        'contact_id' => ['type' => 'relation', 'relation' => 'contacts', 'label' => 'Contact', 'group' => 'Deal'],
+        'pipeline_id' => ['type' => 'pipeline', 'label' => 'Pipeline', 'filter' => true, 'group' => 'Deal'],
+        'stage_id' => ['type' => 'stage', 'label' => 'Stage', 'list' => true, 'filter' => true, 'group' => 'Deal'],
+        'amount' => ['type' => 'money', 'label' => 'Amount', 'list' => true, 'group' => 'Deal', 'aggregate' => 'sum'],
+        'currency' => ['type' => 'currency', 'label' => 'Currency', 'group' => 'Deal'],
+        'probability' => ['type' => 'percent', 'label' => 'Probability', 'group' => 'Deal', 'help' => 'Defaults to the stage probability'],
+        'expected_close' => ['type' => 'date', 'label' => 'Expected close', 'list' => true, 'filter' => true, 'group' => 'Deal'],
+        'status' => ['type' => 'select', 'label' => 'Status', 'options' => ['open' => 'Open', 'won' => 'Won', 'lost' => 'Lost'], 'list' => true, 'filter' => true, 'readonly' => true, 'group' => 'Deal'],
+        'type' => ['type' => 'select', 'label' => 'Type', 'options' => ['New Business', 'Upsell', 'Renewal', 'Cross-sell'], 'filter' => true, 'group' => 'Deal'],
+        'source' => ['type' => 'select', 'label' => 'Source', 'options' => 'picklist:lead_source', 'filter' => true, 'group' => 'Deal'],
+        'is_recurring' => ['type' => 'bool', 'label' => 'Recurring revenue', 'group' => 'Revenue'],
+        'recurring_interval' => ['type' => 'select', 'label' => 'Billing interval', 'options' => ['Monthly', 'Quarterly', 'Yearly'], 'group' => 'Revenue'],
+        'next_step' => ['type' => 'text', 'label' => 'Next step', 'group' => 'Deal', 'width' => 'full'],
+        'lost_reason' => ['type' => 'select', 'label' => 'Lost reason', 'options' => 'picklist:lost_reason', 'group' => 'Outcome'],
+        'competitor' => ['type' => 'text', 'label' => 'Competitor', 'group' => 'Outcome'],
+        'closed_at' => ['type' => 'datetime', 'label' => 'Closed at', 'readonly' => true, 'group' => 'Outcome'],
+        'lead_id' => ['type' => 'relation', 'relation' => 'leads', 'label' => 'Source lead', 'readonly' => true, 'group' => 'Outcome'],
+        'tags' => ['type' => 'tags', 'label' => 'Tags', 'filter' => true, 'group' => 'Deal'],
+        'description' => ['type' => 'textarea', 'label' => 'Description', 'width' => 'full', 'group' => 'Deal'],
+    ],
+    'related' => [
+        ['entity' => 'quotes', 'fk' => 'deal_id', 'label' => 'Quotes'],
+        ['entity' => 'projects', 'fk' => 'deal_id', 'label' => 'Projects'],
+        ['entity' => 'tasks', 'morph' => true, 'label' => 'Tasks'],
+        ['entity' => 'events', 'morph' => true, 'label' => 'Meetings'],
+    ],
+];

@@ -1,0 +1,48 @@
+# NextaCRM — Apache / LiteSpeed configuration
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+ServerSignature Off
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct access to private directories and dot-files
+    RewriteRule ^(app|config|storage|vendor|docs|tools)(/|$) - [F,L,NC]
+    RewriteRule (^|/)\. - [F,L]
+    RewriteRule \.(md|json|lock|sql|log|ini|sh|bak|dist)$ - [F,L,NC]
+
+    # Pass the Authorization header to PHP (needed for API tokens on CGI/FPM)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Serve existing static assets directly
+    RewriteCond %{REQUEST_URI} ^(.*/)?assets/ [NC]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Everything else goes to the front controller
+    RewriteCond %{REQUEST_FILENAME} !-f [OR]
+    RewriteCond %{REQUEST_FILENAME} \.php$
+    RewriteCond %{REQUEST_FILENAME} !(^|/)(index|cron)\.php$
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+<FilesMatch "^(manifest\.json|composer\.(json|lock)|.*\.md)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always unset X-Powered-By
+    <FilesMatch "\.(css|js|svg|png|jpg|jpeg|webp|woff2|ico)$">
+        Header set Cache-Control "public, max-age=2592000, immutable"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_flag expose_php Off
+    php_value upload_max_filesize 64M
+    php_value post_max_size 70M
+</IfModule>

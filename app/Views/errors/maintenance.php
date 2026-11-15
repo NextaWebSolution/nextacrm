@@ -1,0 +1,2 @@
+<?php defined('NX_ROOT') || exit; ?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Maintenance</title><link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>"></head>
+<body class="grid min-h-screen place-items-center p-6" style="--brand:#4f46e5"><div class="card max-w-md p-8 text-center"><h1 class="text-xl font-semibold">We'll be right back</h1><p class="mt-2 text-sm text-muted">The system is being updated. This usually takes less than a minute.</p></div></body></html>

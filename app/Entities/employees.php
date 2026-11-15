@@ -1,0 +1,37 @@
+<?php
+defined('NX_ROOT') || exit;
+return [
+    'table' => 'employees', 'label' => 'Employees', 'singular' => 'Employee', 'module' => 'employees', 'icon' => 'briefcase', 'group' => 'Team',
+    'title' => 'name', 'subtitle' => 'designation', 'board' => 'status', 'default_sort' => ['name', 'asc'],
+    'search' => ['name', 'email', 'phone', 'employee_code', 'skills'],
+    'quick' => ['first_name', 'last_name', 'email', 'department_id', 'designation', 'joining_date'],
+    'computed' => ['name' => ['first_name', 'last_name']],
+    'assigned_label' => 'HR owner',
+    'fields' => [
+        'name' => ['type' => 'text', 'label' => 'Name', 'list' => true, 'form' => false],
+        'first_name' => ['type' => 'text', 'label' => 'First name', 'required' => true, 'group' => 'Profile'],
+        'last_name' => ['type' => 'text', 'label' => 'Last name', 'group' => 'Profile'],
+        'employee_code' => ['type' => 'text', 'label' => 'Employee ID', 'list' => true, 'group' => 'Profile'],
+        'user_id' => ['type' => 'user', 'label' => 'CRM user account', 'group' => 'Profile'],
+        'email' => ['type' => 'email', 'label' => 'Work email', 'list' => true, 'group' => 'Profile'],
+        'phone' => ['type' => 'phone', 'label' => 'Phone', 'group' => 'Profile'],
+        'department_id' => ['type' => 'relation', 'relation' => 'departments', 'label' => 'Department', 'list' => true, 'filter' => true, 'group' => 'Employment'],
+        'designation' => ['type' => 'text', 'label' => 'Designation', 'list' => true, 'group' => 'Employment'],
+        'manager_id' => ['type' => 'relation', 'relation' => 'employees', 'label' => 'Reports to', 'group' => 'Employment'],
+        'employment_type' => ['type' => 'select', 'label' => 'Employment type', 'options' => ['Full-time', 'Part-time', 'Contract', 'Intern', 'Consultant'], 'default' => 'Full-time', 'filter' => true, 'group' => 'Employment'],
+        'status' => ['type' => 'select', 'label' => 'Status', 'options' => ['Active', 'On Probation', 'On Notice', 'Exited'], 'default' => 'Active', 'list' => true, 'filter' => true, 'group' => 'Employment'],
+        'joining_date' => ['type' => 'date', 'label' => 'Joining date', 'list' => true, 'group' => 'Employment'],
+        'exit_date' => ['type' => 'date', 'label' => 'Exit date', 'group' => 'Employment'],
+        'leave_balance' => ['type' => 'decimal', 'label' => 'Leave balance (days)', 'group' => 'Employment'],
+        'salary' => ['type' => 'money', 'label' => 'Monthly salary (CTC)', 'group' => 'Compensation', 'sensitive' => 'manage'],
+        'salary_currency' => ['type' => 'currency', 'label' => 'Salary currency', 'group' => 'Compensation', 'sensitive' => 'manage'],
+        'date_of_birth' => ['type' => 'date', 'label' => 'Date of birth', 'group' => 'Personal'],
+        'address' => ['type' => 'textarea', 'label' => 'Address', 'group' => 'Personal'],
+        'emergency_contact' => ['type' => 'text', 'label' => 'Emergency contact', 'group' => 'Personal'],
+        'skills' => ['type' => 'tags', 'label' => 'Skills', 'filter' => true, 'group' => 'Profile'],
+        'notes' => ['type' => 'textarea', 'label' => 'Notes', 'width' => 'full', 'group' => 'Personal'],
+    ],
+    'related' => [
+        ['entity' => 'leave_requests', 'fk' => 'employee_id', 'label' => 'Leave'],
+    ],
+];

@@ -1,0 +1,35 @@
+<?php
+defined('NX_ROOT') || exit;
+return [
+    'table' => 'contacts', 'label' => 'Contacts', 'singular' => 'Contact', 'module' => 'contacts', 'icon' => 'contact', 'group' => 'Sales',
+    'title' => 'name', 'subtitle' => 'job_title', 'default_sort' => ['name', 'asc'],
+    'search' => ['name', 'email', 'phone', 'mobile'],
+    'quick' => ['first_name', 'last_name', 'customer_id', 'email', 'phone', 'job_title'],
+    'computed' => ['name' => ['first_name', 'last_name']],
+    'fields' => [
+        'name' => ['type' => 'text', 'label' => 'Name', 'list' => true, 'form' => false, 'group' => 'Contact'],
+        'first_name' => ['type' => 'text', 'label' => 'First name', 'required' => true, 'group' => 'Contact'],
+        'last_name' => ['type' => 'text', 'label' => 'Last name', 'group' => 'Contact'],
+        'customer_id' => ['type' => 'relation', 'relation' => 'customers', 'label' => 'Customer', 'list' => true, 'filter' => true, 'group' => 'Contact'],
+        'job_title' => ['type' => 'text', 'label' => 'Job title', 'list' => true, 'group' => 'Contact'],
+        'department' => ['type' => 'text', 'label' => 'Department', 'group' => 'Contact'],
+        'email' => ['type' => 'email', 'label' => 'Email', 'list' => true, 'group' => 'Contact'],
+        'phone' => ['type' => 'phone', 'label' => 'Phone', 'list' => true, 'group' => 'Contact'],
+        'mobile' => ['type' => 'phone', 'label' => 'Mobile / WhatsApp', 'group' => 'Contact'],
+        'is_primary' => ['type' => 'bool', 'label' => 'Primary contact', 'filter' => true, 'group' => 'Contact'],
+        'linkedin' => ['type' => 'url', 'label' => 'LinkedIn', 'group' => 'Contact'],
+        'birthday' => ['type' => 'date', 'label' => 'Birthday', 'group' => 'Personal'],
+        'next_follow_up' => ['type' => 'date', 'label' => 'Next follow-up', 'list' => true, 'filter' => true, 'group' => 'Personal'],
+        'address' => ['type' => 'textarea', 'label' => 'Address', 'group' => 'Personal'],
+        'city' => ['type' => 'text', 'label' => 'City', 'group' => 'Personal'],
+        'country' => ['type' => 'text', 'label' => 'Country', 'group' => 'Personal'],
+        'tags' => ['type' => 'tags', 'label' => 'Tags', 'filter' => true, 'group' => 'Contact'],
+        'description' => ['type' => 'textarea', 'label' => 'Notes', 'width' => 'full', 'group' => 'Contact'],
+    ],
+    'related' => [
+        ['entity' => 'deals', 'fk' => 'contact_id', 'label' => 'Deals'],
+        ['entity' => 'tickets', 'fk' => 'contact_id', 'label' => 'Tickets'],
+        ['entity' => 'tasks', 'morph' => true, 'label' => 'Tasks'],
+        ['entity' => 'events', 'morph' => true, 'label' => 'Meetings'],
+    ],
+];

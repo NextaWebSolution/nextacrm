@@ -1,0 +1,38 @@
+<?php
+defined('NX_ROOT') || exit;
+return [
+    'table' => 'customers', 'label' => 'Customers', 'singular' => 'Customer', 'module' => 'customers', 'icon' => 'building', 'group' => 'Sales',
+    'title' => 'name', 'subtitle' => 'industry', 'board' => 'type', 'default_sort' => ['name', 'asc'],
+    'search' => ['name', 'email', 'phone', 'website', 'tax_id'],
+    'quick' => ['name', 'type', 'email', 'phone', 'industry', 'assigned_to'],
+    'fields' => [
+        'name' => ['type' => 'text', 'label' => 'Name', 'required' => true, 'list' => true, 'group' => 'Organization'],
+        'type' => ['type' => 'select', 'label' => 'Type', 'options' => 'picklist:customer_type', 'default' => 'Customer', 'list' => true, 'filter' => true, 'group' => 'Organization'],
+        'email' => ['type' => 'email', 'label' => 'Email', 'list' => true, 'group' => 'Organization'],
+        'phone' => ['type' => 'phone', 'label' => 'Phone', 'list' => true, 'group' => 'Organization'],
+        'website' => ['type' => 'url', 'label' => 'Website', 'group' => 'Organization'],
+        'industry' => ['type' => 'select', 'label' => 'Industry', 'options' => 'picklist:industry', 'list' => true, 'filter' => true, 'group' => 'Organization'],
+        'company_size' => ['type' => 'select', 'label' => 'Company size', 'options' => ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'], 'group' => 'Organization'],
+        'annual_revenue' => ['type' => 'money', 'label' => 'Annual revenue', 'group' => 'Organization'],
+        'source' => ['type' => 'select', 'label' => 'Source', 'options' => 'picklist:lead_source', 'filter' => true, 'group' => 'Organization'],
+        'tax_id' => ['type' => 'text', 'label' => 'Tax ID / GSTIN', 'group' => 'Billing'],
+        'currency' => ['type' => 'currency', 'label' => 'Currency', 'group' => 'Billing'],
+        'billing_address' => ['type' => 'textarea', 'label' => 'Billing address', 'group' => 'Billing'],
+        'city' => ['type' => 'text', 'label' => 'City', 'list' => true, 'filter' => true, 'group' => 'Billing'],
+        'state' => ['type' => 'text', 'label' => 'State', 'group' => 'Billing'],
+        'country' => ['type' => 'text', 'label' => 'Country', 'filter' => true, 'group' => 'Billing'],
+        'postal_code' => ['type' => 'text', 'label' => 'Postal code', 'group' => 'Billing'],
+        'tags' => ['type' => 'tags', 'label' => 'Tags', 'filter' => true, 'group' => 'Organization'],
+        'description' => ['type' => 'textarea', 'label' => 'About', 'group' => 'Organization', 'width' => 'full'],
+    ],
+    'related' => [
+        ['entity' => 'contacts', 'fk' => 'customer_id', 'label' => 'Contacts'],
+        ['entity' => 'deals', 'fk' => 'customer_id', 'label' => 'Deals'],
+        ['entity' => 'projects', 'fk' => 'customer_id', 'label' => 'Projects'],
+        ['entity' => 'quotes', 'fk' => 'customer_id', 'label' => 'Quotes'],
+        ['entity' => 'invoices', 'fk' => 'customer_id', 'label' => 'Invoices'],
+        ['entity' => 'tickets', 'fk' => 'customer_id', 'label' => 'Tickets'],
+        ['entity' => 'contracts', 'fk' => 'customer_id', 'label' => 'Contracts'],
+        ['entity' => 'tasks', 'morph' => true, 'label' => 'Tasks'],
+    ],
+];
