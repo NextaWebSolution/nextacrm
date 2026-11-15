@@ -505,6 +505,9 @@ return static function (Schema $s): void {
         $t->string('tags', 500)->nullable();
         $t->date('next_follow_up');
         $t->text('description');
+        $t->bool('portal_enabled');
+        $t->string('portal_password')->nullable();
+        $t->datetime('portal_last_login');
         $t->record();
         $t->index(['customer_id']);
         $t->index(['email']);
@@ -587,6 +590,7 @@ return static function (Schema $s): void {
         $t->datetime('accepted_at');
         $t->string('accepted_by_name', 150)->nullable();
         $t->foreignId('invoice_id');
+        $t->string('approval_status', 20)->nullable();
         $t->record();
         $t->index(['company_id', 'status']);
         $t->index(['customer_id']);
@@ -642,6 +646,9 @@ return static function (Schema $s): void {
         $t->string('method', 50)->nullable();
         $t->string('reference', 150)->nullable();
         $t->text('notes');
+        $t->string('gateway', 20)->nullable();
+        $t->string('gateway_payment_id', 100)->nullable();
+        $t->index(['gateway', 'gateway_payment_id']);
         $t->record(false);
         $t->index(['invoice_id']);
     });
@@ -664,6 +671,7 @@ return static function (Schema $s): void {
         $t->datetime('approved_at');
         $t->foreignId('invoice_id');
         $t->text('notes');
+        $t->string('approval_status', 20)->nullable();
         $t->record();
         $t->index(['company_id', 'expense_date']);
     });
@@ -682,6 +690,10 @@ return static function (Schema $s): void {
         $t->int('renewal_reminder_days')->default(30);
         $t->string('status', 20)->default('Draft');
         $t->text('description');
+        $t->string('public_token', 64)->nullable();
+        $t->datetime('renewal_notified_at');
+        $t->datetime('signed_at');
+        $t->string('signed_by_name', 150)->nullable();
         $t->record();
         $t->index(['end_date']);
     });
@@ -754,6 +766,10 @@ return static function (Schema $s): void {
         $t->string('tags', 500)->nullable();
         $t->text('description');
         $t->int('sort')->default(0);
+        $t->json('checklist');
+        $t->string('recurrence', 20)->nullable();
+        $t->date('recur_until');
+        $t->foreignId('recurred_from');
         $t->record();
         $t->index(['company_id', 'status']);
         $t->index(['project_id']);
@@ -829,6 +845,7 @@ return static function (Schema $s): void {
         $t->string('status', 20)->default('Draft');
         $t->int('views')->default(0);
         $t->string('tags', 500)->nullable();
+        $t->bool('is_public');
         $t->record(false);
     });
 
@@ -865,6 +882,13 @@ return static function (Schema $s): void {
         $t->string('emergency_contact')->nullable();
         $t->string('skills', 500)->nullable();
         $t->text('notes');
+        $t->bool('pf_applicable')->default(1);
+        $t->bool('esi_applicable')->default(1);
+        $t->bool('pt_applicable')->default(1);
+        $t->string('pan', 20)->nullable();
+        $t->string('uan', 20)->nullable();
+        $t->string('bank_account', 40)->nullable();
+        $t->string('bank_ifsc', 15)->nullable();
         $t->record();
         $t->index(['department_id']);
     });
@@ -904,5 +928,315 @@ return static function (Schema $s): void {
         $t->text('description');
         $t->record();
         $t->index(['company_id', 'starts_at']);
+    });
+
+    // ───────────────────────────── v1.1 · Client portal & payments ─────────────────────────────
+    $s->create('portal_sessions', function (T $t) {
+        $t->id();
+        $t->foreignId('contact_id');
+        $t->foreignId('company_id');
+        $t->string('token_hash', 64);
+        $t->string('ua_hash', 64);
+        $t->string('ip', 45)->nullable();
+        $t->datetime('created_at');
+        $t->datetime('last_seen_at');
+        $t->datetime('revoked_at');
+        $t->unique(['token_hash']);
+        $t->index(['contact_id']);
+    });
+
+    $s->create('portal_tokens', function (T $t) {
+        $t->id();
+        $t->foreignId('contact_id');
+        $t->string('token_hash', 64);
+        $t->string('purpose', 20)->default('invite');
+        $t->datetime('expires_at');
+        $t->datetime('used_at');
+        $t->datetime('created_at');
+        $t->unique(['token_hash']);
+    });
+
+    $s->create('payment_attempts', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->foreignId('invoice_id');
+        $t->string('gateway', 20);
+        $t->string('gateway_order_id', 120)->nullable();
+        $t->decimal('amount')->default(0);
+        $t->string('currency', 3)->default('INR');
+        $t->string('status', 20)->default('created');
+        $t->string('gateway_payment_id', 120)->nullable();
+        $t->foreignId('payment_id');
+        $t->string('source', 20)->default('public');
+        $t->text('error');
+        $t->timestamps();
+        $t->index(['gateway', 'gateway_order_id']);
+        $t->index(['invoice_id']);
+    });
+
+    $s->create('gateway_events', function (T $t) {
+        $t->id();
+        $t->string('gateway', 20);
+        $t->string('event_id', 150);
+        $t->string('type', 80)->nullable();
+        $t->datetime('received_at');
+        $t->unique(['gateway', 'event_id']);
+    });
+
+    // ───────────────────────────── v1.1 · Inbox, WhatsApp, signatures ─────────────────────────────
+    $s->create('mailboxes', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('name', 100);
+        $t->string('host', 190);
+        $t->int('port')->default(993);
+        $t->string('encryption', 10)->default('ssl');
+        $t->string('username', 190);
+        $t->text('password');
+        $t->string('folder', 100)->default('INBOX');
+        $t->string('purpose', 20)->default('tickets');
+        $t->bool('is_active')->default(1);
+        $t->datetime('last_checked_at');
+        $t->text('last_error');
+        $t->timestamps();
+        $t->index(['company_id']);
+    });
+
+    $s->create('inbound_messages', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->foreignId('mailbox_id');
+        $t->string('message_hash', 64);
+        $t->string('from_email', 190)->nullable();
+        $t->string('subject', 255)->nullable();
+        $t->string('entity', 64)->nullable();
+        $t->foreignId('record_id');
+        $t->datetime('received_at');
+        $t->unique(['mailbox_id', 'message_hash']);
+    });
+
+    $s->create('whatsapp_messages', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('provider', 20);
+        $t->string('to_number', 30);
+        $t->text('body');
+        $t->string('template', 100)->nullable();
+        $t->string('status', 20)->default('queued');
+        $t->string('provider_message_id', 150)->nullable();
+        $t->text('error');
+        $t->string('entity', 64)->nullable();
+        $t->foreignId('record_id');
+        $t->foreignId('created_by');
+        $t->datetime('created_at');
+        $t->index(['company_id', 'created_at']);
+    });
+
+    $s->create('signatures', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('entity', 64);
+        $t->foreignId('record_id');
+        $t->string('signer_name', 150);
+        $t->string('signer_email', 190)->nullable();
+        $t->string('signer_ip', 45)->nullable();
+        $t->string('user_agent', 255)->nullable();
+        $t->longText('image');
+        $t->string('document_hash', 64);
+        $t->datetime('signed_at');
+        $t->index(['entity', 'record_id']);
+    });
+
+    // ───────────────────────────── v1.2 · Sequences, reports, approvals ─────────────────────────────
+    $s->create('email_sequences', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('name', 150);
+        $t->string('entity', 30)->default('leads');
+        $t->bool('is_active')->default(1);
+        $t->bool('stop_on_reply')->default(1);
+        $t->foreignId('created_by');
+        $t->timestamps();
+        $t->index(['company_id']);
+    });
+
+    $s->create('sequence_steps', function (T $t) {
+        $t->id();
+        $t->foreignId('sequence_id');
+        $t->int('sort')->default(0);
+        $t->int('delay_days')->default(0);
+        $t->string('subject', 255);
+        $t->longText('body');
+        $t->index(['sequence_id']);
+    });
+
+    $s->create('sequence_enrollments', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->foreignId('sequence_id');
+        $t->string('entity', 30);
+        $t->foreignId('record_id');
+        $t->string('email', 190);
+        $t->string('status', 20)->default('active');
+        $t->int('current_step')->default(0);
+        $t->datetime('next_run_at');
+        $t->datetime('last_sent_at');
+        $t->foreignId('enrolled_by');
+        $t->timestamps();
+        $t->unique(['sequence_id', 'entity', 'record_id']);
+        $t->index(['status', 'next_run_at']);
+    });
+
+    $s->create('email_unsubscribes', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('email', 190);
+        $t->datetime('created_at');
+        $t->unique(['company_id', 'email']);
+    });
+
+    $s->create('custom_reports', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('name', 150);
+        $t->string('entity', 64);
+        $t->json('config');
+        $t->bool('is_shared');
+        $t->string('schedule', 10)->default('none');
+        $t->text('recipients');
+        $t->datetime('last_sent_at');
+        $t->foreignId('created_by');
+        $t->timestamps();
+        $t->index(['company_id']);
+    });
+
+    $s->create('approval_flows', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('name', 150);
+        $t->string('entity', 30);
+        $t->decimal('min_amount')->default(0);
+        $t->json('steps');
+        $t->bool('is_active')->default(1);
+        $t->timestamps();
+        $t->index(['company_id', 'entity']);
+    });
+
+    $s->create('approval_requests', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->foreignId('flow_id');
+        $t->string('entity', 30);
+        $t->foreignId('record_id');
+        $t->string('status', 20)->default('pending');
+        $t->int('current_step')->default(0);
+        $t->foreignId('requested_by');
+        $t->datetime('decided_at');
+        $t->timestamps();
+        $t->index(['entity', 'record_id']);
+        $t->index(['company_id', 'status']);
+    });
+
+    $s->create('approval_actions', function (T $t) {
+        $t->id();
+        $t->foreignId('request_id');
+        $t->int('step')->default(0);
+        $t->foreignId('user_id');
+        $t->string('decision', 20);
+        $t->text('comment');
+        $t->datetime('created_at');
+        $t->index(['request_id']);
+    });
+
+    // ───────────────────────────── v2.0 · Attendance, payroll, AI, modules ─────────────────────────────
+    $s->create('holidays', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->date('date');
+        $t->string('name', 150);
+        $t->unique(['company_id', 'date']);
+    });
+
+    $s->create('attendance', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->foreignId('employee_id');
+        $t->date('date');
+        $t->datetime('check_in');
+        $t->datetime('check_out');
+        $t->int('minutes')->default(0);
+        $t->string('status', 20)->default('Present');
+        $t->string('source', 20)->default('web');
+        $t->string('ip', 45)->nullable();
+        $t->text('note');
+        $t->foreignId('created_by');
+        $t->timestamps();
+        $t->unique(['employee_id', 'date']);
+        $t->index(['company_id', 'date']);
+    });
+
+    $s->create('payroll_runs', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->string('month', 7);
+        $t->string('status', 20)->default('Draft');
+        $t->decimal('total_gross')->default(0);
+        $t->decimal('total_deductions')->default(0);
+        $t->decimal('total_net')->default(0);
+        $t->foreignId('created_by');
+        $t->foreignId('approved_by');
+        $t->datetime('approved_at');
+        $t->datetime('paid_at');
+        $t->timestamps();
+        $t->unique(['company_id', 'month']);
+    });
+
+    $s->create('payslips', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->foreignId('run_id');
+        $t->foreignId('employee_id');
+        $t->int('working_days')->default(0);
+        $t->decimal('paid_days', 6, 2)->default(0);
+        $t->decimal('lop_days', 6, 2)->default(0);
+        $t->decimal('gross')->default(0);
+        $t->decimal('basic')->default(0);
+        $t->decimal('hra')->default(0);
+        $t->decimal('special')->default(0);
+        $t->decimal('pf')->default(0);
+        $t->decimal('esi')->default(0);
+        $t->decimal('pt')->default(0);
+        $t->decimal('tds')->default(0);
+        $t->decimal('other_deductions')->default(0);
+        $t->decimal('net')->default(0);
+        $t->json('components');
+        $t->timestamps();
+        $t->unique(['run_id', 'employee_id']);
+    });
+
+    $s->create('ai_usage', function (T $t) {
+        $t->id();
+        $t->foreignId('company_id');
+        $t->foreignId('user_id');
+        $t->string('feature', 40);
+        $t->string('provider', 20);
+        $t->string('model', 80)->nullable();
+        $t->int('input_tokens')->default(0);
+        $t->int('output_tokens')->default(0);
+        $t->datetime('created_at');
+        $t->index(['company_id', 'created_at']);
+    });
+
+    $s->create('installed_modules', function (T $t) {
+        $t->id();
+        $t->string('slug', 60);
+        $t->string('name', 150);
+        $t->string('version', 20);
+        $t->string('author', 150)->nullable();
+        $t->bool('enabled')->default(1);
+        $t->bool('signed');
+        $t->json('manifest');
+        $t->timestamps();
+        $t->unique(['slug']);
     });
 };

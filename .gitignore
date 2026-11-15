@@ -20,8 +20,13 @@
 *.sqlite-*
 .env
 .env.*
+!.env.example
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 node_modules/
+
+# Installed marketplace modules (runtime); keep the deny rule
+/modules/*
+!/modules/.htaccess

@@ -291,3 +291,62 @@ function str_limit(?string $s, int $n = 80): string
     $s = (string) $s;
     return mb_strlen($s) > $n ? mb_substr($s, 0, $n - 1) . '…' : $s;
 }
+
+/**
+ * Safe Markdown subset for knowledge-base articles: everything is HTML-escaped first, then a fixed set of
+ * patterns is converted (#/##/### headings, **bold**, _italic_, `code`, ``` blocks, - / 1. lists, [text](https://url)).
+ * Only http(s) and relative links are produced, so no script URLs can be injected.
+ */
+function markdown_safe(?string $md): string
+{
+    $md = str_replace("\r", '', (string) $md);
+    $blocks = preg_split('/\n```.*?\n(.*?)\n```/s', "\n" . $md, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$md];
+    $html = '';
+    foreach ($blocks as $i => $block) {
+        if ($i % 2 === 1) {
+            $html .= '<pre class="kb-code"><code>' . e($block) . '</code></pre>';
+            continue;
+        }
+        $lines = explode("\n", e(trim($block, "\n")));
+        $list = null;
+        $para = [];
+        $flush = function () use (&$para, &$html) {
+            if ($para) {
+                $html .= '<p>' . implode('<br>', $para) . '</p>';
+                $para = [];
+            }
+        };
+        foreach ($lines as $line) {
+            $inline = function (string $t): string {
+                $t = preg_replace('/`([^`]+)`/', '<code>$1</code>', $t) ?? $t;
+                $t = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $t) ?? $t;
+                $t = preg_replace('/(?<![\w])_([^_]+)_(?![\w])/', '<em>$1</em>', $t) ?? $t;
+                return preg_replace_callback('/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^\s)"<>]+)\)/', fn ($m) => '<a href="' . $m[2] . '" rel="noopener nofollow" target="' . (str_starts_with($m[2], '/') ? '_self' : '_blank') . '">' . $m[1] . '</a>', $t) ?? $t;
+            };
+            if (preg_match('/^(#{1,3})\s+(.+)$/', $line, $m)) {
+                $flush();
+                if ($list) { $html .= "</$list>"; $list = null; }
+                $lvl = strlen($m[1]) + 1;
+                $html .= "<h$lvl>" . $inline($m[2]) . "</h$lvl>";
+            } elseif (preg_match('/^\s*([-*]|\d+\.)\s+(.+)$/', $line, $m)) {
+                $flush();
+                $type = ctype_digit(rtrim($m[1], '.')) ? 'ol' : 'ul';
+                if ($list !== $type) {
+                    if ($list) { $html .= "</$list>"; }
+                    $html .= "<$type>";
+                    $list = $type;
+                }
+                $html .= '<li>' . $inline($m[2]) . '</li>';
+            } elseif (trim($line) === '') {
+                $flush();
+                if ($list) { $html .= "</$list>"; $list = null; }
+            } else {
+                if ($list) { $html .= "</$list>"; $list = null; }
+                $para[] = $inline($line);
+            }
+        }
+        $flush();
+        if ($list) { $html .= "</$list>"; }
+    }
+    return $html;
+}

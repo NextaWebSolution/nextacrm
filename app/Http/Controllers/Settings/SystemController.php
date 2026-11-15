@@ -92,6 +92,11 @@ final class SystemController extends Controller
         $f = $r->file('package');
         $version = preg_replace('/[^0-9A-Za-z.\-]/', '', $r->str('version')) ?? '';
         $sig = $r->str('signature');
+        $tooBig = ($f && in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true))
+            || (!$f && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 && empty($_POST));
+        if ($tooBig) {
+            return $this->back('error', 'The package is larger than this server allows for uploads (upload_max_filesize = ' . ini_get('upload_max_filesize') . ', post_max_size = ' . ini_get('post_max_size') . '). Use "Check for updates" (one-click), or raise both limits to 64M in cPanel → MultiPHP INI Editor.');
+        }
         if (!$f || $f['error'] !== UPLOAD_ERR_OK || $version === '' || $sig === '') {
             return $this->back('error', 'Upload the package and enter its version and signature.');
         }

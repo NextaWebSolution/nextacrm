@@ -19,6 +19,8 @@ return [
         'spent_hours' => ['type' => 'decimal', 'label' => 'Logged (h)', 'readonly' => true, 'list' => true],
         'progress' => ['type' => 'percent', 'label' => 'Progress'],
         'is_billable' => ['type' => 'bool', 'label' => 'Billable', 'filter' => true],
+        'recurrence' => ['type' => 'select', 'label' => 'Repeat', 'options' => ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'], 'help' => 'When this task is marked Done, the next one is created automatically.'],
+        'recur_until' => ['type' => 'date', 'label' => 'Repeat until'],
         'depends_on' => ['type' => 'text', 'label' => 'Blocked by (task IDs)', 'help' => 'Comma-separated task IDs that must be done first'],
         'related_entity' => ['type' => 'hidden', 'label' => 'Related type'],
         'related_id' => ['type' => 'hidden', 'label' => 'Related record'],

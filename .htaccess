@@ -7,7 +7,7 @@ ServerSignature Off
     RewriteEngine On
 
     # Block direct access to private directories and dot-files
-    RewriteRule ^(app|config|storage|vendor|docs|tools)(/|$) - [F,L,NC]
+    RewriteRule ^(app|config|storage|vendor|docs|tools|modules|examples|tests)(/|$) - [F,L,NC]
     RewriteRule (^|/)\. - [F,L]
     RewriteRule \.(md|json|lock|sql|log|ini|sh|bak|dist)$ - [F,L,NC]
 

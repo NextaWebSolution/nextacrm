@@ -50,7 +50,7 @@ final class TicketController extends Controller
         if (!$internal) {
             $to = $t['requester_email'] ?: ($t['contact_id'] ? $db->value('SELECT email FROM contacts WHERE id = ?', [$t['contact_id']]) : null);
             if ($to && $r->input('notify', '1') === '1') {
-                Mailer::queue((string) $to, '[' . $t['number'] . '] ' . $t['subject'], nl2br_safe($body) . '<hr style="border:none;border-top:1px solid #eee;margin:20px 0"><p style="font-size:12px;color:#6b7280">Ticket ' . e($t['number']) . ' · Reply to this e-mail or contact us to follow up.</p>', [], Auth::user()['email']);
+                Mailer::queue((string) $to, '[' . $t['number'] . '] ' . $t['subject'], nl2br_safe($body) . '<hr style="border:none;border-top:1px solid #eee;margin:20px 0"><p style="font-size:12px;color:#6b7280">Ticket ' . e($t['number']) . ' · Reply to this e-mail or contact us to follow up.</p>', [], \App\Services\InboxService::replyAddress() ?? Auth::user()['email']);
             }
         }
         return $this->json(['ok' => true, 'message' => $internal ? 'Internal note added' : 'Reply sent', 'reload' => true]);

@@ -1,0 +1,8 @@
+{
+  "slug": "birthday-reminders",
+  "name": "Birthday reminders",
+  "version": "1.0.0",
+  "author": "Nexta Web Solution",
+  "description": "Creates a task for the HR owner a few days before each employee's birthday and shows the next birthday on the employee page.",
+  "requires": { "nextacrm": "2.0.0" }
+}

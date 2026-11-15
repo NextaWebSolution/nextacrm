@@ -66,7 +66,7 @@ server {
     index index.php;
     client_max_body_size 70m;
 
-    location ~ ^/(app|config|storage|vendor|docs|tools)(/|$) { deny all; return 404; }
+    location ~ ^/(app|config|storage|vendor|docs|tools|modules|examples|tests)(/|$) { deny all; return 404; }
     location ~ /\.            { deny all; return 404; }
     location ~ \.(md|json|lock|sql|log|ini|sh|bak|dist)$ { deny all; return 404; }
 
@@ -113,12 +113,16 @@ Settings → System → *Create backup* produces a ZIP of a full SQL dump plus `
 2. downloads the package and verifies its **SHA-256**,
 3. rejects any archive entry with unsafe paths,
 4. enables maintenance mode and creates a **full backup**,
-5. replaces application files (never `config/` or `storage/`),
+5. replaces application files (never `config/`, `storage/` or installed `modules/`) and removes files the new release no longer ships,
 6. runs pending database **migrations**, resets OPcache, and logs the result in the audit log.
+
+**Upload limits:** release packages are about 6 MB. Many shared hosts default to `upload_max_filesize = 2M`; if the upload form says the file is too large, use one-click update, or raise `upload_max_filesize` and `post_max_size` to 64M in cPanel → MultiPHP INI Editor.
 
 **Manual update:** upload the new ZIP in Settings → System → Updates together with its version and signature (from `latest.json`) — the same signature check applies; or extract it over the installation via File Manager without overwriting `config/` and `storage/`, then open Settings → System to run migrations.
 
 ## 9. Publishing a release (vendor)
+
+The complete step-by-step checklist (versioning, migrations, tests, upgrade test, signing, publishing) is in [RELEASE_PROCESS.md](RELEASE_PROCESS.md). Summary:
 
 ```
 NEXTACRM_SIGNING_KEY=<base64 secret key> php tools/release.php --out=dist --notes="Bug fixes"
@@ -134,3 +138,44 @@ The signing **secret key must never be placed inside the application, the reposi
 - `php tools/gen-db-doc.php` regenerates `docs/DATABASE_DESIGN.md` from `app/Database/schema.php`.
 - `php tools/smoke-install.php /abs/path/test.sqlite --demo` performs a scripted install against SQLite for local testing (CLI only; repository only, not shipped in release packages because it uses a demo password).
 - REST API reference (OpenAPI 3.1) is served at `/api/docs` and `/api/v1/openapi.json` once installed.
+
+## 11. Integrations (v2.0)
+
+All keys below are stored **encrypted** per company and are never shown again after saving. Each integration is off until you enable it.
+
+### Online payments (Settings → Online payments)
+
+| Gateway | What to paste | Webhook to create in the gateway dashboard |
+|---|---|---|
+| Razorpay | Key ID, Key secret, Webhook secret | event `payment_link.paid` → `https://your-crm/hooks/pay/razorpay/<company-id>` |
+| Stripe | Secret key (or restricted key with Checkout write), Webhook signing secret | event `checkout.session.completed` → `https://your-crm/hooks/pay/stripe/<company-id>` |
+| PayPal | Client ID, Client secret, Webhook ID (Sandbox toggle for testing) | event `PAYMENT.CAPTURE.COMPLETED` → `https://your-crm/hooks/pay/paypal/<company-id>` |
+
+The exact URLs with your company ID are shown on the settings page with copy buttons. Customers pay on the provider's hosted page; NextaCRM records the payment only after a verified return or a signed webhook, once, for the exact amount and currency requested (anything else is flagged for review). Your server needs outbound HTTPS to the gateway APIs.
+
+### E-mail to ticket (Settings → Inbox)
+
+IMAP host, port (993 for SSL), username and an app password. Choose whether new e-mails create **tickets** or **leads**. Cron polls every run (every 5 minutes). Replies to ticket notifications thread back automatically using the `[TKT-0001]` tag in the subject; set the reply-to address to the same mailbox. Auto-replies, bounces and messages from your own address are ignored.
+
+### WhatsApp (Settings → WhatsApp)
+
+- **Meta Cloud API**: phone number ID + permanent access token. Free-form messages only reach customers who messaged you in the last 24 hours; otherwise use an approved template (template name, variables separated by `|`).
+- **Twilio**: Account SID, auth token, WhatsApp-enabled sender number.
+- **Gupshup**: API key, source number, app name.
+
+### AI assistant (Settings → AI assistant)
+
+Choose Anthropic, OpenAI or any OpenAI-compatible server (e.g. a self-hosted model), paste the API key, optionally set a model and a daily request limit for the workspace. Only the record being viewed is sent, only to users who can view it; salary, PAN, bank details, passwords and tokens are never sent, and e-mail addresses/phone numbers are masked unless you opt in. A private/local server address must be explicitly allowed.
+
+### Client portal
+
+Open a contact (who belongs to a customer) → **Client portal → Invite**. The contact receives an e-mail to set a password and then signs in at `https://your-crm/portal`. Share individual files with the portal from the file's menu. Disable access at any time from the same panel.
+
+### Modules (Settings → Modules)
+
+Install signed modules from the marketplace or by upload. Developer mode (unsigned modules) is install-wide and should stay off in production. See [MODULES.md](MODULES.md).
+
+### Cron jobs added in 2.0
+
+The single cron line from §3 now also runs: inbox polling, e-mail sequences, contract renewals, scheduled reports, recurring tasks (on completion) and any module jobs. Keep it at every 5 minutes.
+

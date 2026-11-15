@@ -12,7 +12,7 @@ Leads, deals, quotations, invoices, projects, timesheets, support tickets and HR
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Alpine.js](https://img.shields.io/badge/Alpine.js-3-8BC0D0?logo=alpinedotjs&logoColor=white)
 ![cPanel ready](https://img.shields.io/badge/cPanel-ready-FF6C2C?logo=cpanel&logoColor=white)
-![Version](https://img.shields.io/badge/version-1.0.1-4F46E5)
+![Version](https://img.shields.io/badge/version-2.0.0-4F46E5)
 
 [Features](#features) · [Screenshots](#screenshots) · [Install](#installation) · [Hosting](#recommended-hosting) · [Security](#security) · [API](#rest-api) · [Docs](#documentation)
 
@@ -33,26 +33,34 @@ NextaCRM covers the full journey, **lead → deal → quotation → project → 
 - Leads with web-to-lead forms, scoring, duplicate detection and one-click conversion to customer, contact and deal
 - Multiple deal pipelines on a drag-and-drop Kanban board with stage probabilities and weighted forecast
 - Customers and contacts with activity timeline, notes, calls, meetings and files
-- Quotations with PDF export and a public accept/decline link for your client; converts to an invoice
+- Quotations with PDF export and a public accept/decline link with **e-signature** for your client; converts to an invoice
+- **E-mail sequences** (drip campaigns) with automatic stop on reply and one-click unsubscribe
+- **WhatsApp** messages through Meta Cloud API, Twilio or Gupshup
 
 **Delivery**
 
 - Projects with members, budgets, milestones and progress
 - Tasks with Kanban, priorities, due dates and dependencies (a task can't close while it's blocked)
 - One-click timers and timesheets, then bill unbilled hours straight to an invoice
+- **Gantt** timeline, recurring tasks and task checklists
 
 **Finance**
 
 - GST/VAT-ready invoices with taxes, discounts, partial payments and overdue tracking
 - Recurring invoices generated automatically by the scheduler
-- Payments, expenses, products and services, contracts
+- **Online payments** with Razorpay, Stripe and PayPal from the invoice link or the client portal, recorded automatically after a signed confirmation
+- **Approval chains** for quotations and expenses (multi-step, by role or user)
+- Payments, expenses, products and services, contracts with e-signature and **renewal reminders**
 - Multi-currency with exchange rates and Indian number formatting (₹1,23,45,678.00)
 
 **Support and team**
 
 - Tickets with priorities, SLA targets and breach alerts, internal notes vs customer replies
-- Internal knowledge base
+- **E-mail to ticket** over IMAP with reply threading
+- Knowledge base with a **public help centre**
+- **Client portal**: customers see their invoices, quotations, projects, tickets and shared files, and pay online
 - Employees, departments and leave requests with approval
+- **Attendance** (check-in/out, monthly register, holidays) and **payroll** (LOP, PF, ESI, PT, TDS, payslip PDFs)
 - Shared calendar for meetings, task due dates, leave, invoice due dates and expected deal closes
 
 **Platform**
@@ -64,7 +72,9 @@ NextaCRM covers the full journey, **lead → deal → quotation → project → 
 - Workflow automation triggered on create, update, delete, field change, a date schedule, an incoming webhook or a manual run. Actions include creating tasks, updating fields, assigning by round-robin, sending e-mail, adding notes, notifying users and calling webhooks
 - REST API v1 with OpenAPI 3 documentation, scoped tokens and signed outgoing webhooks
 - Multi-company with separate numbering, currency and branding per company
-- Dashboards and reports: sales, pipeline, invoice aging, time, tickets, lead sources, expenses and project profitability
+- Dashboards and reports: sales, pipeline, invoice aging, time, tickets, lead sources, expenses and project profitability, plus a **report builder** with scheduled e-mail delivery
+- **AI assistant** (bring your own Anthropic, OpenAI or self-hosted key): record summaries, next steps and reply drafts, with sensitive data kept out
+- **Module marketplace**: signed add-ons that plug into navigation, record pages, cron, settings and workflows ([SDK](docs/MODULES.md))
 - Light, dark and system themes, keyboard shortcuts, and a mobile layout with drawer and bottom navigation
 
 **File storage drivers**
@@ -98,6 +108,18 @@ Each file remembers the driver it was saved on, so switching the default later w
   <tr>
     <td><img src=".github/assets/screenshots/command-palette.png" alt="Global search command palette"><p align="center"><sub>Global search (Ctrl K)</sub></p></td>
     <td><img src=".github/assets/screenshots/storage-settings.png" alt="Storage settings with S3, Wasabi, FTP and SFTP drivers"><p align="center"><sub>Storage drivers</sub></p></td>
+  </tr>
+  <tr>
+    <td><img src=".github/assets/screenshots/client-portal.png" alt="Client portal showing invoices to pay and project progress"><p align="center"><sub>Client portal</sub></p></td>
+    <td><img src=".github/assets/screenshots/report-builder.png" alt="Report builder grouping deal value by stage"><p align="center"><sub>Report builder</sub></p></td>
+  </tr>
+  <tr>
+    <td><img src=".github/assets/screenshots/attendance.png" alt="Monthly attendance register with check-in and holidays"><p align="center"><sub>Attendance register</sub></p></td>
+    <td><img src=".github/assets/screenshots/payroll.png" alt="Payroll run with PF, ESI, professional tax and TDS"><p align="center"><sub>Payroll with PF, ESI, PT and TDS</sub></p></td>
+  </tr>
+  <tr>
+    <td><img src=".github/assets/screenshots/payment-settings.png" alt="Razorpay, Stripe and PayPal payment settings"><p align="center"><sub>Online payments</sub></p></td>
+    <td><img src=".github/assets/screenshots/modules.png" alt="Module marketplace with signed modules"><p align="center"><sub>Modules</sub></p></td>
   </tr>
   <tr>
     <td><img src=".github/assets/screenshots/dashboard-dark.png" alt="NextaCRM dashboard in dark mode"><p align="center"><sub>Dark mode</sub></p></td>
@@ -199,11 +221,15 @@ curl -H "Authorization: Bearer nx_your_token" \
 app/
   Core/          Router, auth, sessions, permissions, crypto, storage drivers
   Entities/      One file per module: fields, views, permissions
-  Services/      Business logic (sales, projects, workflows, webhooks, search, updates)
-  Http/          Controllers for web, settings and REST API
+  Services/      Business logic (sales, projects, payments, payroll, AI, workflows, updates…)
+  Http/          Controllers for web, portal, settings and REST API
   Views/         PHP templates
   Database/      Schema and migrations
+  features.php   Registers v2 features through the extension registry
 assets/          Compiled CSS and JS, icons
+modules/         Installed marketplace modules (not web-accessible)
+examples/        Sample module for the SDK (repository only)
+tests/           Unit, end-to-end, attacker-simulation and browser tests (repository only)
 config/          Generated by the installer (not in the repository)
 storage/         Uploads, logs, cache, backups (not web-accessible)
 vendor/          Bundled PHP libraries
@@ -218,15 +244,17 @@ docs/            Architecture, database, security and install guides
 | [SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) | Request lifecycle, record engine, layers |
 | [DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) | Every table, column and index |
 | [SECURITY_PLAN.md](docs/SECURITY_PLAN.md) | Threat model and controls |
-| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) | v1.0 audit findings and test results |
+| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) | v1.0 audit and v2.0 review: findings and test results |
 | [FEATURE_COMPARISON.md](docs/FEATURE_COMPARISON.md) | NextaCRM vs EspoCRM, Odoo, ERPNext, Twenty, SuiteCRM |
 | [PRODUCT_REQUIREMENTS.md](docs/PRODUCT_REQUIREMENTS.md) | Scope and requirements |
+| [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) | How to ship the next update, step by step |
+| [MODULES.md](docs/MODULES.md) | Module SDK and marketplace |
 | [DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md) | What's next |
 | [CHANGELOG.md](CHANGELOG.md) | Release notes |
 
 ## Roadmap
 
-The next release (v1.1) is planned to add a client portal, Razorpay, Stripe and PayPal payment links, e-mail to ticket via IMAP, a Gantt view, task checklists and recurrence, contract renewal reminders, a public help centre and WhatsApp notifications. See the [full roadmap](docs/DEVELOPMENT_ROADMAP.md).
+Version 2.0 delivered everything planned for v1.1, v1.2 and v2.0. Candidates for v2.1 include two-way calendar sync, inbound WhatsApp conversations, portal-side signing and state-wise payroll slabs. See the [full roadmap](docs/DEVELOPMENT_ROADMAP.md).
 
 ## License
 

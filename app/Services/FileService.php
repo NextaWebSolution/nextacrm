@@ -25,6 +25,27 @@ final class FileService
      * Validate and store an uploaded file.
      * @param array $upload  An entry from $_FILES
      */
+    /**
+     * Stores a file the server itself wrote under storage/tmp (e.g. an e-mail attachment). All type and content
+     * checks of upload() still apply; only the "came from an HTTP upload" check is replaced by the path check.
+     */
+    public static function storeLocal(string $tmpPath, string $name, ?string $entity = null, ?int $recordId = null): array
+    {
+        $real = realpath($tmpPath) ?: '';
+        $base = realpath(NX_ROOT . '/storage/tmp') ?: "\0";
+        if ($real === '' || !str_starts_with($real, $base . DIRECTORY_SEPARATOR) || !is_file($real)) {
+            throw new HttpException(422, 'Invalid local file.');
+        }
+        self::$localTrusted = true;
+        try {
+            return self::upload(['name' => $name, 'tmp_name' => $real, 'error' => UPLOAD_ERR_OK, 'size' => filesize($real)], $entity, $recordId);
+        } finally {
+            self::$localTrusted = false;
+        }
+    }
+
+    private static bool $localTrusted = false;
+
     public static function upload(array $upload, ?string $entity = null, ?int $recordId = null, ?int $folderId = null, bool $imageOnly = false): array
     {
         $err = (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE);
@@ -36,7 +57,7 @@ final class FileService
             });
         }
         $tmp = (string) $upload['tmp_name'];
-        if (!is_uploaded_file($tmp) && !defined('NX_TESTING')) {
+        if (!is_uploaded_file($tmp) && !self::$localTrusted && !defined('NX_TESTING')) {
             throw new HttpException(422, 'Invalid upload.');
         }
         $size = (int) filesize($tmp);
@@ -129,7 +150,13 @@ final class FileService
 
     public static function download(int $id, bool $inline = false): Response
     {
-        $f = self::get($id);
+        return self::stream(self::get($id), $inline);
+    }
+
+    /** Streams a file row the caller has already authorised. */
+    public static function stream(array $f, bool $inline = false): Response
+    {
+        $id = (int) $f['id'];
         $inline = $inline && in_array($f['mime'], self::INLINE_MIME, true);
         $disk = StorageManager::disk($f['driver']);
         if (!$inline && setting('storage.signed_urls', false)) {

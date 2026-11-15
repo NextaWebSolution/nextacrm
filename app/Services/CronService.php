@@ -33,6 +33,10 @@ final class CronService
             'cleanup' => fn () => self::daily('cleanup', fn () => self::cleanup()),
             'purge_deleted' => fn () => self::daily('purge', fn () => self::purgeDeleted()),
         ];
+        foreach (\App\Core\Extensions::cronJobs() as $name => $job) {
+            $run = $job['perCompany'] ? fn () => self::perCompany($job['fn']) : $job['fn'];
+            $jobs[$name] = $job['daily'] ? fn () => self::daily($name, $run) : $run;
+        }
         foreach ($jobs as $name => $job) {
             try {
                 $report[$name] = $job();

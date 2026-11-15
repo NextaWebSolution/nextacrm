@@ -1,0 +1,11 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const page = await (await browser.newContext()).newPage();
+page.on('console', (m) => console.log('CONSOLE', m.type(), m.text().slice(0, 300)));
+page.on('pageerror', (e) => console.log('PAGEERROR', e.message.slice(0, 300)));
+await page.goto('http://127.0.0.1:8099/login');
+await page.fill('#email', 'admin@example.com'); await page.fill('#password', 'Str0ngPassw0rd!');
+await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
+await page.waitForTimeout(1500);
+console.log('Alpine?', await page.evaluate(() => typeof window.Alpine + ' ' + (window.Alpine && window.Alpine.version)));
+await browser.close();

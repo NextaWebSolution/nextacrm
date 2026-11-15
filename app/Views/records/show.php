@@ -173,6 +173,8 @@ $stage = $record['_stage'] ?? null;
         </section>
       <?php endif; ?>
 
+      <?= App\Core\Extensions::renderPanels($entity, 'main', $record, $svc) ?>
+
       <!-- Tabs -->
       <section class="card" x-data="{ tab: 'activity' }">
         <div class="tabs px-3">
@@ -268,6 +270,7 @@ $stage = $record['_stage'] ?? null;
 
     <!-- Details sidebar -->
     <aside class="space-y-5">
+      <?= App\Core\Extensions::renderPanels($entity, 'side', $record, $svc) ?>
       <?php foreach ($groups as $gname => $gfields): ?>
       <section class="card">
         <div class="card-header"><h2 class="card-title"><?= e($gname) ?></h2></div>

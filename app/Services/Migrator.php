@@ -44,4 +44,55 @@ final class Migrator
         }
         return $done;
     }
+
+    /**
+     * Brings the live database in line with app/Database/schema.php: creates missing tables and adds missing
+     * columns and indexes. Never drops or alters existing columns. Safe to run repeatedly (MySQL and SQLite).
+     * @return array{tables:string[], columns:string[], indexes:string[]}
+     */
+    public static function syncSchema(): array
+    {
+        $db = App::db();
+        $driver = $db->driver;
+        $q = $driver === 'sqlite' ? '"' : '`';
+        $report = ['tables' => [], 'columns' => [], 'indexes' => []];
+        foreach (\App\Core\Schema::load()->tables as $table) {
+            if (!$db->tableExists($table->name)) {
+                foreach ($table->compile($driver) as $sql) {
+                    $db->query($sql);
+                }
+                $report['tables'][] = $table->name;
+                continue;
+            }
+            $existing = $driver === 'sqlite'
+                ? array_column($db->all("PRAGMA table_info({$q}{$table->name}{$q})"), 'name')
+                : array_column($db->all("SHOW COLUMNS FROM {$q}{$table->name}{$q}"), 'Field');
+            foreach ($table->columns as $col) {
+                if (in_array($col->name, $existing, true) || $col->type === 'id') {
+                    continue;
+                }
+                $c = clone $col;
+                if (!$c->null && !$c->hasDefault) {
+                    // Existing rows need a value: add NOT NULL columns with a neutral default.
+                    $c->default(in_array($c->type, ['int', 'bigint', 'bool', 'decimal', 'fk'], true) ? 0 : '');
+                }
+                $db->query("ALTER TABLE {$q}{$table->name}{$q} ADD COLUMN " . $c->compile($driver));
+                $report['columns'][] = $table->name . '.' . $col->name;
+            }
+            $indexes = $driver === 'sqlite'
+                ? array_column($db->all("PRAGMA index_list({$q}{$table->name}{$q})"), 'name')
+                : array_unique(array_column($db->all("SHOW INDEX FROM {$q}{$table->name}{$q}"), 'Key_name'));
+            foreach ($table->indexes as $ix) {
+                $name = substr($ix['name'], 0, 60);
+                if (in_array($name, $indexes, true)) {
+                    continue;
+                }
+                $cols = implode(',', array_map(fn ($c) => $q . $c . $q, $ix['cols']));
+                $u = $ix['type'] === 'unique' ? 'UNIQUE ' : '';
+                $db->query("CREATE {$u}INDEX {$q}{$name}{$q} ON {$q}{$table->name}{$q} ($cols)");
+                $report['indexes'][] = $name;
+            }
+        }
+        return $report;
+    }
 }

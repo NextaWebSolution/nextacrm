@@ -1,0 +1,35 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+import { execSync } from 'node:child_process';
+const theme = (t) => execSync(`php -r '$p=new PDO("sqlite:/home/claude/testsite/storage/test.sqlite");$p->exec("update users set preferences=json_set(coalesce(preferences,\\"{}\\"),\\"$.theme\\",\\"${t}\\")");'`);
+const BASE = 'http://127.0.0.1:8099', OUT = '/home/claude/nextacrm/.github/assets/screenshots';
+const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+async function ctx(viewport, scheme, scale = 1, mobile = false) {
+  const c = await b.newContext({ viewport, colorScheme: scheme, deviceScaleFactor: scale, isMobile: mobile, hasTouch: mobile });
+  const p = await c.newPage();
+  await p.goto(BASE + '/login'); await p.fill('#email', 'admin@example.com'); await p.fill('#password', 'Str0ngPassw0rd!');
+  await Promise.all([p.waitForNavigation(), p.click('button[type=submit]')]);
+  return p;
+}
+const go = async (p, path, name, opts = {}) => { await p.goto(BASE + path, { waitUntil: 'networkidle' }); await p.waitForTimeout(700); await p.screenshot({ path: `${OUT}/${name}.png`, fullPage: !!opts.full }); console.log(name); };
+theme('light');
+let p = await ctx({ width: 1440, height: 900 }, 'light');
+await go(p, '/', 'dashboard');
+await go(p, '/r/deals', 'deals-pipeline');
+await go(p, '/r/invoices/1', 'invoice');
+await go(p, '/r/projects/1', 'project');
+await go(p, '/r/tasks?view=board', 'tasks-board');
+await go(p, '/r/tickets', 'tickets');
+await go(p, '/calendar', 'calendar');
+await go(p, '/reports/sales', 'reports');
+await go(p, '/settings/storage', 'storage-settings');
+await p.goto(BASE + '/r/leads', { waitUntil: 'networkidle' }); await p.keyboard.press('Control+k'); await p.waitForTimeout(300); await p.keyboard.type('acme'); await p.waitForTimeout(900); await p.screenshot({ path: `${OUT}/command-palette.png` }); console.log('palette');
+theme('dark');
+p = await ctx({ width: 1440, height: 900 }, 'dark');
+await go(p, '/', 'dashboard-dark');
+await go(p, '/r/deals', 'deals-dark');
+theme('light');
+p = await ctx({ width: 390, height: 844 }, 'light', 2, true);
+await go(p, '/', 'mobile-dashboard');
+await go(p, '/r/leads', 'mobile-leads');
+await go(p, '/r/deals/1', 'mobile-deal');
+await b.close();

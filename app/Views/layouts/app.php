@@ -81,7 +81,7 @@ $isActive = fn (string $p) => $p === '/' ? $path === '/' : str_starts_with($path
         <div class="nav-group" x-show="!collapsed || mobileNav"><?= e($group) ?></div>
         <div class="my-2 h-px bg-[var(--border)]" x-show="collapsed && !mobileNav"></div>
         <?php foreach ($items as $it): ?>
-          <a href="<?= e($it['url']) ?>" class="nav-item <?= $isActive('/r/' . $it['key']) ? 'active' : '' ?>" title="<?= e($it['label']) ?>"><?= icon($it['icon']) ?><span x-show="!collapsed || mobileNav" class="truncate"><?= e($it['label']) ?></span></a>
+          <a href="<?= e($it['url']) ?>" class="nav-item <?= $isActive($it['match'] ?? '/r/' . $it['key']) ? 'active' : '' ?>" title="<?= e($it['label']) ?>"><?= icon($it['icon']) ?><span x-show="!collapsed || mobileNav" class="truncate"><?= e($it['label']) ?></span></a>
         <?php endforeach; ?>
       <?php endforeach; ?>
 

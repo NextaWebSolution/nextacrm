@@ -27,7 +27,11 @@ final class EntityRegistry
             return self::$defs;
         }
         $defs = [];
-        foreach (glob(NX_ROOT . '/app/Entities/*.php') ?: [] as $file) {
+        $files = glob(NX_ROOT . '/app/Entities/*.php') ?: [];
+        foreach (\App\Core\Extensions::entityDirs() as $dir) {
+            $files = array_merge($files, glob(rtrim($dir, '/') . '/*.php') ?: []);
+        }
+        foreach ($files as $file) {
             $key = basename($file, '.php');
             $defs[$key] = self::normalize($key, require $file);
         }
@@ -125,9 +129,14 @@ final class EntityRegistry
             }
             $groups[$d['group'] ?? 'Other'][] = ['key' => $key, 'label' => $d['label'], 'icon' => $d['icon'], 'url' => url('/r/' . $key)];
         }
-        $order = ['Sales' => 1, 'Delivery' => 2, 'Support' => 3, 'Finance' => 4, 'Team' => 5];
+        foreach (\App\Core\Extensions::navItems() as $g => $items) {
+            foreach ($items as $it) {
+                $groups[$g][] = $it;
+            }
+        }
+        $order = ['Sales' => 1, 'Marketing' => 2, 'Delivery' => 3, 'Support' => 4, 'Finance' => 5, 'Team' => 6];
         uksort($groups, fn ($a, $b) => ($order[$a] ?? 9) <=> ($order[$b] ?? 9));
-        $sortOrder = ['leads', 'deals', 'customers', 'contacts', 'quotes', 'projects', 'tasks', 'time_entries', 'tickets', 'kb_articles', 'invoices', 'payments', 'expenses', 'products', 'contracts', 'employees', 'departments', 'leave_requests'];
+        $sortOrder = ['leads', 'deals', 'customers', 'contacts', 'quotes', 'approvals', 'sequences', 'projects', 'tasks', 'time_entries', 'tickets', 'kb_articles', 'invoices', 'payments', 'expenses', 'products', 'contracts', 'employees', 'departments', 'leave_requests', 'attendance', 'payroll'];
         foreach ($groups as &$items) {
             usort($items, fn ($a, $b) => (array_search($a['key'], $sortOrder, true) ?: 99) <=> (array_search($b['key'], $sortOrder, true) ?: 99));
         }

@@ -2,7 +2,7 @@
 
 > Generated from `app/Database/schema.php` by `php tools/gen-db-doc.php`. Do not edit by hand.
 
-**53 tables · 816 columns · 129 indexes** — MySQL 8.0+/MariaDB 10.6+ (InnoDB, utf8mb4_unicode_ci). SQLite is supported for development/testing only.
+**75 tables · 1063 columns · 157 indexes** — MySQL 8.0+/MariaDB 10.6+ (InnoDB, utf8mb4_unicode_ci). SQLite is supported for development/testing only.
 
 ## Conventions
 
@@ -47,6 +47,10 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 - **Support:** [`tickets`](#tickets), [`ticket_replies`](#ticket_replies), [`kb_articles`](#kb_articles)
 - **Team / HR:** [`departments`](#departments), [`employees`](#employees), [`leave_requests`](#leave_requests)
 - **Calendar:** [`events`](#events)
+- **v1.1 · Client portal & payments:** [`portal_sessions`](#portal_sessions), [`portal_tokens`](#portal_tokens), [`payment_attempts`](#payment_attempts), [`gateway_events`](#gateway_events)
+- **v1.1 · Inbox, WhatsApp, signatures:** [`mailboxes`](#mailboxes), [`inbound_messages`](#inbound_messages), [`whatsapp_messages`](#whatsapp_messages), [`signatures`](#signatures)
+- **v1.2 · Sequences, reports, approvals:** [`email_sequences`](#email_sequences), [`sequence_steps`](#sequence_steps), [`sequence_enrollments`](#sequence_enrollments), [`email_unsubscribes`](#email_unsubscribes), [`custom_reports`](#custom_reports), [`approval_flows`](#approval_flows), [`approval_requests`](#approval_requests), [`approval_actions`](#approval_actions)
+- **v2.0 · Attendance, payroll, AI, modules:** [`holidays`](#holidays), [`attendance`](#attendance), [`payroll_runs`](#payroll_runs), [`payslips`](#payslips), [`ai_usage`](#ai_usage), [`installed_modules`](#installed_modules)
 
 ## Platform
 
@@ -649,6 +653,9 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `tags` | VARCHAR(500) | yes |  |
 | `next_follow_up` | DATE | yes |  |
 | `description` | TEXT | yes |  |
+| `portal_enabled` | TINYINT(1) | no | `0` |
+| `portal_password` | VARCHAR(191) | yes |  |
+| `portal_last_login` | DATETIME | yes |  |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `assigned_to` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
@@ -755,6 +762,7 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `accepted_at` | DATETIME | yes |  |
 | `accepted_by_name` | VARCHAR(150) | yes |  |
 | `invoice_id` | BIGINT UNSIGNED | yes |  |
+| `approval_status` | VARCHAR(20) | yes |  |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `assigned_to` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
@@ -847,6 +855,8 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `method` | VARCHAR(50) | yes |  |
 | `reference` | VARCHAR(150) | yes |  |
 | `notes` | TEXT | yes |  |
+| `gateway` | VARCHAR(20) | yes |  |
+| `gateway_payment_id` | VARCHAR(100) | yes |  |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
 | `updated_by` | BIGINT UNSIGNED | yes |  |
@@ -855,7 +865,7 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `updated_at` | DATETIME | yes |  |
 | `deleted_at` | DATETIME | yes |  |
 
-**Indexes:** (company_id, deleted_at) · (created_at) · (invoice_id)
+**Indexes:** (gateway, gateway_payment_id) · (company_id, deleted_at) · (created_at) · (invoice_id)
 
 ### expenses
 
@@ -878,6 +888,7 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `approved_at` | DATETIME | yes |  |
 | `invoice_id` | BIGINT UNSIGNED | yes |  |
 | `notes` | TEXT | yes |  |
+| `approval_status` | VARCHAR(20) | yes |  |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `assigned_to` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
@@ -906,6 +917,10 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `renewal_reminder_days` | INT | no | `30` |
 | `status` | VARCHAR(20) | no | `Draft` |
 | `description` | TEXT | yes |  |
+| `public_token` | VARCHAR(64) | yes |  |
+| `renewal_notified_at` | DATETIME | yes |  |
+| `signed_at` | DATETIME | yes |  |
+| `signed_by_name` | VARCHAR(150) | yes |  |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `assigned_to` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
@@ -1009,6 +1024,10 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `tags` | VARCHAR(500) | yes |  |
 | `description` | TEXT | yes |  |
 | `sort` | INT | no | `0` |
+| `checklist` | LONGTEXT | yes |  |
+| `recurrence` | VARCHAR(20) | yes |  |
+| `recur_until` | DATE | yes |  |
+| `recurred_from` | BIGINT UNSIGNED | yes |  |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `assigned_to` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
@@ -1112,6 +1131,7 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `status` | VARCHAR(20) | no | `Draft` |
 | `views` | INT | no | `0` |
 | `tags` | VARCHAR(500) | yes |  |
+| `is_public` | TINYINT(1) | no | `0` |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
 | `updated_by` | BIGINT UNSIGNED | yes |  |
@@ -1169,6 +1189,13 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `emergency_contact` | VARCHAR(191) | yes |  |
 | `skills` | VARCHAR(500) | yes |  |
 | `notes` | TEXT | yes |  |
+| `pf_applicable` | TINYINT(1) | no | `1` |
+| `esi_applicable` | TINYINT(1) | no | `1` |
+| `pt_applicable` | TINYINT(1) | no | `1` |
+| `pan` | VARCHAR(20) | yes |  |
+| `uan` | VARCHAR(20) | yes |  |
+| `bank_account` | VARCHAR(40) | yes |  |
+| `bank_ifsc` | VARCHAR(15) | yes |  |
 | `company_id` | BIGINT UNSIGNED | yes |  |
 | `assigned_to` | BIGINT UNSIGNED | yes |  |
 | `created_by` | BIGINT UNSIGNED | yes |  |
@@ -1236,4 +1263,390 @@ Polymorphic tables (`activities`, `files`, `audit_logs`, `notifications`) refere
 | `deleted_at` | DATETIME | yes |  |
 
 **Indexes:** (company_id, deleted_at) · (assigned_to) · (created_at) · (company_id, starts_at)
+
+## v1.1 · Client portal & payments
+
+### portal_sessions
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `contact_id` | BIGINT UNSIGNED | yes |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `token_hash` | VARCHAR(64) | no |  |
+| `ua_hash` | VARCHAR(64) | no |  |
+| `ip` | VARCHAR(45) | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `last_seen_at` | DATETIME | yes |  |
+| `revoked_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (token_hash) · (contact_id)
+
+### portal_tokens
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `contact_id` | BIGINT UNSIGNED | yes |  |
+| `token_hash` | VARCHAR(64) | no |  |
+| `purpose` | VARCHAR(20) | no | `invite` |
+| `expires_at` | DATETIME | yes |  |
+| `used_at` | DATETIME | yes |  |
+| `created_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (token_hash)
+
+### payment_attempts
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `invoice_id` | BIGINT UNSIGNED | yes |  |
+| `gateway` | VARCHAR(20) | no |  |
+| `gateway_order_id` | VARCHAR(120) | yes |  |
+| `amount` | DECIMAL(15,2) | no | `0` |
+| `currency` | VARCHAR(3) | no | `INR` |
+| `status` | VARCHAR(20) | no | `created` |
+| `gateway_payment_id` | VARCHAR(120) | yes |  |
+| `payment_id` | BIGINT UNSIGNED | yes |  |
+| `source` | VARCHAR(20) | no | `public` |
+| `error` | TEXT | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** (gateway, gateway_order_id) · (invoice_id)
+
+### gateway_events
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `gateway` | VARCHAR(20) | no |  |
+| `event_id` | VARCHAR(150) | no |  |
+| `type` | VARCHAR(80) | yes |  |
+| `received_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (gateway, event_id)
+
+## v1.1 · Inbox, WhatsApp, signatures
+
+### mailboxes
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `name` | VARCHAR(100) | no |  |
+| `host` | VARCHAR(190) | no |  |
+| `port` | INT | no | `993` |
+| `encryption` | VARCHAR(10) | no | `ssl` |
+| `username` | VARCHAR(190) | no |  |
+| `password` | TEXT | yes |  |
+| `folder` | VARCHAR(100) | no | `INBOX` |
+| `purpose` | VARCHAR(20) | no | `tickets` |
+| `is_active` | TINYINT(1) | no | `1` |
+| `last_checked_at` | DATETIME | yes |  |
+| `last_error` | TEXT | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** (company_id)
+
+### inbound_messages
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `mailbox_id` | BIGINT UNSIGNED | yes |  |
+| `message_hash` | VARCHAR(64) | no |  |
+| `from_email` | VARCHAR(190) | yes |  |
+| `subject` | VARCHAR(255) | yes |  |
+| `entity` | VARCHAR(64) | yes |  |
+| `record_id` | BIGINT UNSIGNED | yes |  |
+| `received_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (mailbox_id, message_hash)
+
+### whatsapp_messages
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `provider` | VARCHAR(20) | no |  |
+| `to_number` | VARCHAR(30) | no |  |
+| `body` | TEXT | yes |  |
+| `template` | VARCHAR(100) | yes |  |
+| `status` | VARCHAR(20) | no | `queued` |
+| `provider_message_id` | VARCHAR(150) | yes |  |
+| `error` | TEXT | yes |  |
+| `entity` | VARCHAR(64) | yes |  |
+| `record_id` | BIGINT UNSIGNED | yes |  |
+| `created_by` | BIGINT UNSIGNED | yes |  |
+| `created_at` | DATETIME | yes |  |
+
+**Indexes:** (company_id, created_at)
+
+### signatures
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `entity` | VARCHAR(64) | no |  |
+| `record_id` | BIGINT UNSIGNED | yes |  |
+| `signer_name` | VARCHAR(150) | no |  |
+| `signer_email` | VARCHAR(190) | yes |  |
+| `signer_ip` | VARCHAR(45) | yes |  |
+| `user_agent` | VARCHAR(255) | yes |  |
+| `image` | LONGTEXT | yes |  |
+| `document_hash` | VARCHAR(64) | no |  |
+| `signed_at` | DATETIME | yes |  |
+
+**Indexes:** (entity, record_id)
+
+## v1.2 · Sequences, reports, approvals
+
+### email_sequences
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `name` | VARCHAR(150) | no |  |
+| `entity` | VARCHAR(30) | no | `leads` |
+| `is_active` | TINYINT(1) | no | `1` |
+| `stop_on_reply` | TINYINT(1) | no | `1` |
+| `created_by` | BIGINT UNSIGNED | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** (company_id)
+
+### sequence_steps
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `sequence_id` | BIGINT UNSIGNED | yes |  |
+| `sort` | INT | no | `0` |
+| `delay_days` | INT | no | `0` |
+| `subject` | VARCHAR(255) | no |  |
+| `body` | LONGTEXT | yes |  |
+
+**Indexes:** (sequence_id)
+
+### sequence_enrollments
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `sequence_id` | BIGINT UNSIGNED | yes |  |
+| `entity` | VARCHAR(30) | no |  |
+| `record_id` | BIGINT UNSIGNED | yes |  |
+| `email` | VARCHAR(190) | no |  |
+| `status` | VARCHAR(20) | no | `active` |
+| `current_step` | INT | no | `0` |
+| `next_run_at` | DATETIME | yes |  |
+| `last_sent_at` | DATETIME | yes |  |
+| `enrolled_by` | BIGINT UNSIGNED | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (sequence_id, entity, record_id) · (status, next_run_at)
+
+### email_unsubscribes
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `email` | VARCHAR(190) | no |  |
+| `created_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (company_id, email)
+
+### custom_reports
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `name` | VARCHAR(150) | no |  |
+| `entity` | VARCHAR(64) | no |  |
+| `config` | LONGTEXT | yes |  |
+| `is_shared` | TINYINT(1) | no | `0` |
+| `schedule` | VARCHAR(10) | no | `none` |
+| `recipients` | TEXT | yes |  |
+| `last_sent_at` | DATETIME | yes |  |
+| `created_by` | BIGINT UNSIGNED | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** (company_id)
+
+### approval_flows
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `name` | VARCHAR(150) | no |  |
+| `entity` | VARCHAR(30) | no |  |
+| `min_amount` | DECIMAL(15,2) | no | `0` |
+| `steps` | LONGTEXT | yes |  |
+| `is_active` | TINYINT(1) | no | `1` |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** (company_id, entity)
+
+### approval_requests
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `flow_id` | BIGINT UNSIGNED | yes |  |
+| `entity` | VARCHAR(30) | no |  |
+| `record_id` | BIGINT UNSIGNED | yes |  |
+| `status` | VARCHAR(20) | no | `pending` |
+| `current_step` | INT | no | `0` |
+| `requested_by` | BIGINT UNSIGNED | yes |  |
+| `decided_at` | DATETIME | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** (entity, record_id) · (company_id, status)
+
+### approval_actions
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `request_id` | BIGINT UNSIGNED | yes |  |
+| `step` | INT | no | `0` |
+| `user_id` | BIGINT UNSIGNED | yes |  |
+| `decision` | VARCHAR(20) | no |  |
+| `comment` | TEXT | yes |  |
+| `created_at` | DATETIME | yes |  |
+
+**Indexes:** (request_id)
+
+## v2.0 · Attendance, payroll, AI, modules
+
+### holidays
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `date` | DATE | yes |  |
+| `name` | VARCHAR(150) | no |  |
+
+**Indexes:** UNIQUE (company_id, date)
+
+### attendance
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `employee_id` | BIGINT UNSIGNED | yes |  |
+| `date` | DATE | yes |  |
+| `check_in` | DATETIME | yes |  |
+| `check_out` | DATETIME | yes |  |
+| `minutes` | INT | no | `0` |
+| `status` | VARCHAR(20) | no | `Present` |
+| `source` | VARCHAR(20) | no | `web` |
+| `ip` | VARCHAR(45) | yes |  |
+| `note` | TEXT | yes |  |
+| `created_by` | BIGINT UNSIGNED | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (employee_id, date) · (company_id, date)
+
+### payroll_runs
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `month` | VARCHAR(7) | no |  |
+| `status` | VARCHAR(20) | no | `Draft` |
+| `total_gross` | DECIMAL(15,2) | no | `0` |
+| `total_deductions` | DECIMAL(15,2) | no | `0` |
+| `total_net` | DECIMAL(15,2) | no | `0` |
+| `created_by` | BIGINT UNSIGNED | yes |  |
+| `approved_by` | BIGINT UNSIGNED | yes |  |
+| `approved_at` | DATETIME | yes |  |
+| `paid_at` | DATETIME | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (company_id, month)
+
+### payslips
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `run_id` | BIGINT UNSIGNED | yes |  |
+| `employee_id` | BIGINT UNSIGNED | yes |  |
+| `working_days` | INT | no | `0` |
+| `paid_days` | DECIMAL(6,2) | no | `0` |
+| `lop_days` | DECIMAL(6,2) | no | `0` |
+| `gross` | DECIMAL(15,2) | no | `0` |
+| `basic` | DECIMAL(15,2) | no | `0` |
+| `hra` | DECIMAL(15,2) | no | `0` |
+| `special` | DECIMAL(15,2) | no | `0` |
+| `pf` | DECIMAL(15,2) | no | `0` |
+| `esi` | DECIMAL(15,2) | no | `0` |
+| `pt` | DECIMAL(15,2) | no | `0` |
+| `tds` | DECIMAL(15,2) | no | `0` |
+| `other_deductions` | DECIMAL(15,2) | no | `0` |
+| `net` | DECIMAL(15,2) | no | `0` |
+| `components` | LONGTEXT | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (run_id, employee_id)
+
+### ai_usage
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `company_id` | BIGINT UNSIGNED | yes |  |
+| `user_id` | BIGINT UNSIGNED | yes |  |
+| `feature` | VARCHAR(40) | no |  |
+| `provider` | VARCHAR(20) | no |  |
+| `model` | VARCHAR(80) | yes |  |
+| `input_tokens` | INT | no | `0` |
+| `output_tokens` | INT | no | `0` |
+| `created_at` | DATETIME | yes |  |
+
+**Indexes:** (company_id, created_at)
+
+### installed_modules
+
+| Column | Type | Null | Default |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED PK AI | no |  |
+| `slug` | VARCHAR(60) | no |  |
+| `name` | VARCHAR(150) | no |  |
+| `version` | VARCHAR(20) | no |  |
+| `author` | VARCHAR(150) | yes |  |
+| `enabled` | TINYINT(1) | no | `1` |
+| `signed` | TINYINT(1) | no | `0` |
+| `manifest` | LONGTEXT | yes |  |
+| `created_at` | DATETIME | yes |  |
+| `updated_at` | DATETIME | yes |  |
+
+**Indexes:** UNIQUE (slug)
 

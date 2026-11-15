@@ -196,6 +196,25 @@
   .cal-cell { min-height: 6.5rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: .3rem; }
   .cal-event { display: block; width: 100%; text-align: left; font-size: .7rem; padding: .1rem .35rem; border-radius: .3rem; margin-top: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+  /* Knowledge-base articles (public help centre) */
+  .kb-article h2 { font-size: 1.25rem; font-weight: 600; margin: 1.6rem 0 .5rem; letter-spacing: -.01em; }
+  .kb-article h3 { font-size: 1.05rem; font-weight: 600; margin: 1.3rem 0 .4rem; }
+  .kb-article h4 { font-size: .95rem; font-weight: 600; margin: 1.1rem 0 .3rem; }
+  .kb-article p { margin: .7rem 0; line-height: 1.7; }
+  .kb-article ul, .kb-article ol { margin: .7rem 0 .7rem 1.4rem; line-height: 1.7; }
+  .kb-article ul { list-style: disc; } .kb-article ol { list-style: decimal; }
+  .kb-article a { color: var(--color-primary-600); text-decoration: underline; text-underline-offset: 2px; }
+  .kb-article code { background: var(--surface-2); padding: .1rem .35rem; border-radius: .3rem; font-size: .85em; }
+  .kb-code { background: var(--surface-2); border: 1px solid var(--border); border-radius: .5rem; padding: .8rem 1rem; overflow-x: auto; font-size: .8rem; margin: .8rem 0; }
+
+  /* Gantt */
+  .gantt { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); }
+  .gantt-row { display: contents; }
+  .gantt-label { padding: .45rem .75rem; border-bottom: 1px solid var(--border); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gantt-track { position: relative; border-bottom: 1px solid var(--border); min-height: 2.1rem; }
+  .gantt-bar { position: absolute; top: .45rem; height: 1.2rem; border-radius: .35rem; font-size: .65rem; color: #fff; padding: 0 .4rem; line-height: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gantt-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #ef4444; opacity: .55; z-index: 1; }
+
   /* Document (invoice/quote) preview */
   .doc-paper { background: #fff; color: #18181b; border-radius: .5rem; box-shadow: 0 1px 3px rgb(0 0 0 / .08), 0 12px 32px -12px rgb(0 0 0 / .15); }
 }

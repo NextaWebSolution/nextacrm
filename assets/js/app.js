@@ -640,6 +640,36 @@
     });
 
     // Chart.js wrapper with theme-aware colours
+    // Shared Chart.js factory (bar, line, doughnut, pie) used by dashboards, reports and the report builder.
+    NX.makeChart = function (canvas, cfg) {
+      var round = cfg.type === 'doughnut' || cfg.type === 'pie';
+      var dark = document.documentElement.classList.contains('dark');
+      var grid = dark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)', text = dark ? '#a3a3ad' : '#71717a';
+      var brand = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#4f46e5';
+      var palette = [brand, '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899', '#64748b', '#84cc16'];
+      var ds = (cfg.datasets || []).map(function (d, i) {
+        var c = d.color || palette[i % palette.length];
+        var o = Object.assign({ borderWidth: cfg.type === 'line' ? 2 : 0, borderRadius: cfg.type === 'bar' ? 5 : 0, tension: 0.35, pointRadius: 0, pointHoverRadius: 4, maxBarThickness: 36 }, d);
+        if (round) { o.backgroundColor = palette; o.borderWidth = 2; o.borderColor = dark ? '#141417' : '#fff'; }
+        else { o.backgroundColor = cfg.type === 'line' ? c + '22' : (d.muted ? c + '55' : c); o.borderColor = c; o.fill = cfg.type === 'line' && i === 0; }
+        return o;
+      });
+      var money = cfg.money;
+      return new Chart(canvas, {
+        type: cfg.type, data: { labels: cfg.labels, datasets: ds },
+        options: {
+          responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, animation: cfg.animation === false ? false : undefined,
+          plugins: { legend: { display: ds.length > 1 || round, position: round ? 'right' : 'bottom', labels: { color: text, boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 11 } } },
+            tooltip: { callbacks: money ? { label: function (c) { var v = c.parsed.y != null ? c.parsed.y : c.parsed; return ' ' + c.dataset.label + ': ' + Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 }); } } : {} } },
+          scales: round ? {} : {
+            x: { grid: { display: false }, ticks: { color: text, font: { size: 11 } }, border: { display: false } },
+            y: { grid: { color: grid }, border: { display: false }, ticks: { color: text, font: { size: 11 }, callback: function (v) { var a = Math.abs(v); return money ? (a >= 1e7 ? (v / 1e7).toFixed(1) + 'Cr' : a >= 1e5 ? (v / 1e5).toFixed(1) + 'L' : a >= 1e3 ? (v / 1e3).toFixed(0) + 'k' : v) : (a >= 1e6 ? +(v / 1e6).toFixed(1) + 'M' : a >= 1e3 ? +(v / 1e3).toFixed(1) + 'k' : v); } }, beginAtZero: true }
+          },
+          cutout: cfg.type === 'doughnut' ? '68%' : undefined
+        }
+      });
+    };
+
     A.data('chart', function (cfg) {
       return {
         chart: null,
@@ -647,35 +677,49 @@
           var self = this;
           var draw = function () {
             if (!window.Chart) { setTimeout(draw, 60); return; }
-            var dark = document.documentElement.classList.contains('dark');
-            var grid = dark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)', text = dark ? '#a3a3ad' : '#71717a';
-            var brand = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#4f46e5';
-            var palette = [brand, '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899', '#64748b', '#84cc16'];
-            var ds = (cfg.datasets || []).map(function (d, i) {
-              var c = d.color || palette[i % palette.length];
-              var o = Object.assign({ borderWidth: cfg.type === 'line' ? 2 : 0, borderRadius: cfg.type === 'bar' ? 5 : 0, tension: 0.35, pointRadius: 0, pointHoverRadius: 4, maxBarThickness: 36 }, d);
-              if (cfg.type === 'doughnut') { o.backgroundColor = palette; o.borderWidth = 2; o.borderColor = dark ? '#141417' : '#fff'; }
-              else { o.backgroundColor = cfg.type === 'line' ? c + '22' : (d.muted ? c + '55' : c); o.borderColor = c; o.fill = cfg.type === 'line' && i === 0; }
-              return o;
-            });
-            if (self.chart) self.chart.destroy();
-            var money = cfg.money;
-            self.chart = new Chart(self.$refs.canvas, {
-              type: cfg.type, data: { labels: cfg.labels, datasets: ds },
-              options: {
-                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-                plugins: { legend: { display: ds.length > 1 || cfg.type === 'doughnut', position: cfg.type === 'doughnut' ? 'right' : 'bottom', labels: { color: text, boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 11 } } },
-                  tooltip: { callbacks: money ? { label: function (c) { var v = c.parsed.y != null ? c.parsed.y : c.parsed; return ' ' + c.dataset.label + ': ' + Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 }); } } : {} } },
-                scales: cfg.type === 'doughnut' ? {} : {
-                  x: { grid: { display: false }, ticks: { color: text, font: { size: 11 } }, border: { display: false } },
-                  y: { grid: { color: grid }, border: { display: false }, ticks: { color: text, font: { size: 11 }, callback: function (v) { return money ? (v >= 1e7 ? (v / 1e7).toFixed(1) + 'Cr' : v >= 1e5 ? (v / 1e5).toFixed(1) + 'L' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'k' : v) : v; } }, beginAtZero: true }
-                },
-                cutout: cfg.type === 'doughnut' ? '68%' : undefined
-              }
-            });
+            if (self.chart) { self.chart.stop(); self.chart.destroy(); }
+            self.chart = NX.makeChart(self.$refs.canvas, cfg);
           };
           draw();
           window.addEventListener('theme-changed', draw);
+        }
+      };
+    });
+
+    A.data('reportBuilder', function (o) {
+      return {
+        entities: o.entities, cfg: o.cfg, name: o.name, is_shared: o.is_shared, schedule: o.schedule, recipients: o.recipients,
+        res: {}, error: '', busy: false, chart: null, t: null,
+        init: function () { var self = this; this.run(); this.$watch('cfg.filters', function () { self.run(); }, { deep: true }); },
+        ent: function () { return this.entities[this.cfg.entity] || { group: {}, numeric: {} }; },
+        pickField: function () {
+          if (this.cfg.metric === 'count' || this.cfg.metric_field) return;
+          var n = Object.keys(this.ent().numeric);
+          if (n.length) this.cfg.metric_field = n[0]; else this.cfg.metric = 'count';
+        },
+        isDate: function () { var g = this.ent().group[this.cfg.group_by]; return g && (g.type === 'date' || g.type === 'datetime'); },
+        allFields: function () { var out = {}, g = this.ent().group, n = this.ent().numeric; Object.keys(g).forEach(function (k) { out[k] = g[k].label; }); Object.keys(n).forEach(function (k) { out[k] = n[k]; }); return out; },
+        fmt: function (v) { return Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }); },
+        run: function () {
+          var self = this; clearTimeout(this.t);
+          this.t = setTimeout(function () {
+            self.pickField();
+            if (self.cfg.metric !== 'count' && !self.cfg.metric_field) { self.error = 'Choose the number field to measure.'; self.res = {}; return; }
+            var seq = self.seq = (self.seq || 0) + 1; // only the latest preview wins
+            NX.api(o.previewUrl, { method: 'POST', body: JSON.parse(JSON.stringify(self.cfg)) }).then(function (d) { if (seq !== self.seq) return; self.error = ''; self.res = d; self.$nextTick(function () { self.draw(); }); }).catch(function (e) { if (seq !== self.seq) return; self.error = e.message; self.res = {}; });
+          }, 200);
+        },
+        draw: function () {
+          var self = this;
+          if (!window.Chart) { setTimeout(function () { self.draw(); }, 80); return; }
+          if (this.chart) { this.chart.stop(); this.chart.destroy(); this.chart = null; }
+          if (this.cfg.chart === 'none' || !this.res.rows || !this.res.rows.length) return;
+          this.chart = NX.makeChart(this.$refs.canvas, { animation: false, type: this.cfg.chart, labels: this.res.rows.map(function (r) { return r.label; }), datasets: [{ label: this.res.metric_label, data: this.res.rows.map(function (r) { return r.value; }) }] });
+        },
+        save: function () {
+          var self = this; this.busy = true;
+          NX.api(o.saveUrl, { method: 'POST', body: { name: this.name, is_shared: this.is_shared ? 1 : 0, schedule: this.schedule, recipients: this.recipients, config: this.cfg } })
+            .then(NX.handle).catch(NX.fail).finally(function () { self.busy = false; });
         }
       };
     });
@@ -788,6 +832,110 @@
             var svg = self.$el.querySelector('svg'); if (svg) { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'QR code for authenticator app'); }
           };
           draw();
+        }
+      };
+    });
+
+    // E-signature pad: draw with mouse/touch/pen, or type a name that is rendered as a signature.
+    A.data('signaturePad', function () {
+      return {
+        mode: 'draw', typed: '', drawn: false, value: '',
+        init: function () {
+          var self = this, c = this.$refs.canvas, ctx = c.getContext('2d'), down = false, last = null;
+          var fit = function () {
+            var r = c.getBoundingClientRect(), ratio = Math.max(1, window.devicePixelRatio || 1);
+            c.width = Math.round(r.width * ratio); c.height = Math.round(r.height * ratio);
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111827';
+            self.drawn = false; self.value = ''; if (self.mode === 'type') self.renderTyped();
+          };
+          var pos = function (e) { var r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+          c.addEventListener('pointerdown', function (e) { if (self.mode !== 'draw') return; down = true; last = pos(e); c.setPointerCapture(e.pointerId); e.preventDefault(); });
+          c.addEventListener('pointermove', function (e) {
+            if (!down) return; var p = pos(e);
+            ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; self.drawn = true; e.preventDefault();
+          });
+          var up = function () { if (down) { down = false; if (self.drawn) self.value = c.toDataURL('image/png'); } };
+          c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up); c.addEventListener('pointerleave', up);
+          setTimeout(fit, 0); window.addEventListener('resize', function () { if (!self.drawn) fit(); });
+          this.$watch('mode', function () { self.clear(); });
+          this.$watch('typed', function () { if (self.mode === 'type') self.renderTyped(); });
+        },
+        clear: function () {
+          var c = this.$refs.canvas; c.getContext('2d').clearRect(0, 0, c.width, c.height); this.drawn = false; this.value = '';
+          if (this.mode === 'type') this.renderTyped();
+        },
+        renderTyped: function () {
+          var c = this.$refs.canvas, ctx = c.getContext('2d'), r = c.getBoundingClientRect();
+          ctx.clearRect(0, 0, c.width, c.height);
+          var name = (this.typed || '').trim(); if (!name) { this.value = ''; this.drawn = false; return; }
+          var size = Math.min(44, Math.max(20, r.width / Math.max(6, name.length) * 1.6));
+          ctx.fillStyle = '#111827'; ctx.font = 'italic ' + size + 'px "Segoe Script", "Brush Script MT", "Lucida Handwriting", cursive';
+          ctx.textBaseline = 'middle'; ctx.fillText(name, 16, r.height / 2);
+          this.drawn = true; this.value = c.toDataURL('image/png');
+        },
+        check: function (e) { if (!this.value) { e.preventDefault(); NX.toast('Please sign in the box first.', 'error'); } }
+      };
+    });
+
+    A.data('checklist', function (cfg) {
+      return {
+        items: cfg.items || [], canEdit: !!cfg.canEdit, draft: '', timer: null,
+        done: function () { return this.items.filter(function (i) { return i.d; }).length; },
+        pct: function () { return this.items.length ? Math.round(this.done() / this.items.length * 100) : 0; },
+        add: function () { var t = this.draft.trim(); if (!t) return; this.items.push({ t: t, d: false }); this.draft = ''; this.save(); },
+        save: function () {
+          var self = this; clearTimeout(this.timer);
+          this.timer = setTimeout(function () { NX.api(cfg.url, { method: 'POST', body: { items: self.items } }).catch(NX.fail); }, 250);
+        }
+      };
+    });
+
+    A.data('sequenceEditor', function (cfg) {
+      return {
+        seq: cfg.seq, steps: cfg.steps.length ? cfg.steps : [{ delay_days: 0, subject: '', body: '' }], busy: false,
+        save: function () {
+          var self = this; this.busy = true;
+          NX.api(cfg.url, { method: 'POST', body: { name: this.seq.name, entity: this.seq.entity, is_active: this.seq.is_active ? 1 : 0, stop_on_reply: this.seq.stop_on_reply ? 1 : 0, steps: this.steps } })
+            .then(NX.handle).catch(NX.fail).finally(function () { self.busy = false; });
+        }
+      };
+    });
+
+    A.data('approvalFlows', function (cfg) {
+      var blank = function () { return { id: 0, name: '', entity: 'quotes', min_amount: 0, is_active: true, steps: [{ type: 'role', id: 0 }] }; };
+      return {
+        f: blank(),
+        edit: function (x) { this.f = JSON.parse(JSON.stringify(x)); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); },
+        reset: function () { this.f = blank(); },
+        save: function () { NX.api(cfg.url, { method: 'POST', body: this.f }).then(NX.handle).catch(NX.fail); }
+      };
+    });
+
+    A.data('aiAssist', function (cfg) {
+      return {
+        busy: false, text: '', extra: '',
+        go: function (action) {
+          var self = this; this.busy = true; this.text = '';
+          NX.api(cfg.url, { method: 'POST', body: { action: action, extra: this.extra } })
+            .then(function (r) { self.text = r.text || '(no answer)'; })
+            .catch(NX.fail).finally(function () { self.busy = false; });
+        },
+        copy: function () { navigator.clipboard.writeText(this.text).then(function () { NX.toast('Copied'); }); }
+      };
+    });
+
+    A.data('attendanceGrid', function (cfg) {
+      return {
+        open: false, x: 0, y: 0, emp: 0, date: '', btn: null,
+        edit: function (emp, date, cur, ev) {
+          if (!cfg.canMark) return;
+          var r = ev.currentTarget.getBoundingClientRect();
+          this.emp = emp; this.date = date; this.btn = ev.currentTarget;
+          this.x = Math.min(window.innerWidth - 236, r.left); this.y = Math.min(window.innerHeight - 260, r.bottom + 4); this.open = true;
+        },
+        save: function (status) {
+          var self = this; this.open = false;
+          NX.api(cfg.url, { method: 'POST', body: { employee_id: this.emp, date: this.date, status: status } }).then(function () { NX.toast('Saved'); setTimeout(function () { location.reload(); }, 250); }).catch(NX.fail);
         }
       };
     });

@@ -82,5 +82,6 @@ $m = fn ($v) => e(money($v, $cur));
 <?php if ($doc['notes']): ?><div style="margin-top:22px"><div class="label">Notes</div><div class="pre"><?= e($doc['notes']) ?></div></div><?php endif; ?>
 <?php if ($doc['terms']): ?><div style="margin-top:14px"><div class="label">Terms &amp; conditions</div><div class="pre muted"><?= e($doc['terms']) ?></div></div><?php endif; ?>
 <?php if (!$isQuote && !empty($company['bank_details'])): ?><div style="margin-top:14px"><div class="label">Payment details</div><div class="pre"><?= e($company['bank_details']) ?></div></div><?php endif; ?>
+<?php if (!empty($signature)): ?><div style="margin-top:18px"><div class="label">Accepted &amp; signed</div><img src="<?= e($signature['image']) ?>" style="height:56px" alt=""><div class="muted"><?= e($signature['signer_name']) ?> · <?= e(fmt_datetime($signature['signed_at'])) ?> · IP <?= e((string) $signature['signer_ip']) ?></div></div><?php endif; ?>
 <?php if (!empty($company['invoice_footer'])): ?><div class="faint" style="margin-top:28px; text-align:center"><?= e($company['invoice_footer']) ?></div><?php endif; ?>
 </body></html>

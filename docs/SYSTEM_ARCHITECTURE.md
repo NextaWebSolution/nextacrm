@@ -99,3 +99,22 @@ Specialised behaviour (invoice totals, lead conversion, ticket threads, timers) 
 
 ## 9. Update mechanism
 `manifest.json` holds `update.server`. The updater fetches `{server}/latest.json` → `{version, url, sha256, signature}`; verifies the Ed25519 signature over `version|sha256` with the public key in `manifest.json`; downloads through the SSRF-safe client; checks SHA-256; backs up DB (SQL dump) and app files to `storage/backups`; extracts while preserving `config/` and `storage/`; runs pending migrations; writes the new version. Maintenance mode is on during the update.
+
+## Extension registry (v2.0)
+
+`App\Core\Extensions` lets features plug into the application without editing core files. `Extensions::boot()` runs on every web request and in `cron.php`: it loads `app/features.php` (the built-in v2 features) and then every enabled module from `modules/<slug>/module.php`.
+
+| Hook | Consumed by |
+|---|---|
+| `nav()` | `EntityRegistry::nav()` → sidebar groups (permission-filtered) |
+| `routes()` | `App::run()` after `app/routes.php` (first match wins, so core routes take precedence) |
+| `panel()` | `records/show.php` — main column (before tabs) and sidebar cards |
+| `cron()` | `CronService::run()`; `perCompany` jobs run inside `Auth::actingAs()` for each active company |
+| `settingsTab()` | `partials/settings_nav.php` |
+| `permission()` | `Permissions::extraModules()` → role editor |
+| `workflowAction()` | `WorkflowService::actions()` / `runAction()` |
+| `entityDir()`, `viewDir()` | `EntityRegistry::all()`, `View::partial()` |
+
+`Auth::actingAs($userId, $companyId, fn)` is used wherever there is no signed-in staff user — public documents, the client portal, payment webhooks and cron — so that settings, numbering and tenant filters resolve for the right company.
+
+Public, unauthenticated entry points added in 2.0: `/portal/*` (own session), `/p/{type}/{token}` (documents, signing, payment), `/hooks/pay/{gateway}/{company}` (signed webhooks), `/pay/return/…`, `/help`, `/unsubscribe/{token}`. Each validates its own token or signature; none trusts IDs from the request without it.

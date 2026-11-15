@@ -70,7 +70,7 @@ final class WorkflowController extends Controller
         $actions = [];
         foreach ((array) ($in['actions'] ?? []) as $a) {
             $type = (string) ($a['type'] ?? '');
-            if (!array_key_exists($type, WorkflowService::ACTIONS)) {
+            if (!array_key_exists($type, WorkflowService::actions())) {
                 continue;
             }
             if ($type === 'webhook') {
@@ -83,7 +83,7 @@ final class WorkflowController extends Controller
                 throw new HttpException(422, 'Choose the field to update.');
             }
             $clean = ['type' => $type];
-            foreach (['field', 'value', 'user_id', 'title', 'description', 'due_in_days', 'priority', 'assign_to', 'to', 'email', 'subject', 'body', 'url'] as $k) {
+            foreach (['field', 'value', 'user_id', 'title', 'description', 'due_in_days', 'priority', 'assign_to', 'to', 'email', 'subject', 'body', 'url', 'template', 'sequence_id'] as $k) {
                 if (isset($a[$k]) && is_scalar($a[$k])) {
                     $clean[$k] = mb_substr((string) $a[$k], 0, 5000);
                 }

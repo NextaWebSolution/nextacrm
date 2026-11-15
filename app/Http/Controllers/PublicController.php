@@ -39,9 +39,16 @@ final class PublicController extends Controller
 
     public function document(Request $r, string $type, string $token): Response
     {
+        if ($type === 'contract') {
+            return $this->contract($r, $token);
+        }
         $doc = $this->findDoc($type, $token);
         Session::start();
-        return Response::html(View::partial('public/document', SalesService::documentData($type, $doc) + ['token' => $token, 'flash' => Session::takeFlash()]));
+        $extra = \App\Core\Auth::actingAs(0, (int) $doc['company_id'], fn () => [
+            'gateways' => $type === 'invoice' ? \App\Services\Payments\PaymentService::enabled() : [],
+            'signature' => \App\Services\SignatureService::forRecord($type === 'quote' ? 'quotes' : 'invoices', (int) $doc['id']),
+        ]) ?? ['gateways' => [], 'signature' => null];
+        return Response::html(View::partial('public/document', SalesService::documentData($type, $doc) + $extra + ['token' => $token, 'flash' => Session::takeFlash()]));
     }
 
     public function documentPdf(Request $r, string $type, string $token): Response
@@ -66,11 +73,25 @@ final class PublicController extends Controller
             Session::flash('error', 'Please type your name to accept.');
             return Response::redirect('/p/quote/' . $token);
         }
-        // Conditional update: only the first response wins (prevents double-submits and replays).
-        $changed = App::db()->query("UPDATE quotes SET status = ?, accepted_at = ?, accepted_by_name = ? WHERE id = ? AND status = 'Sent'", [$accept ? 'Accepted' : 'Declined', $accept ? DB::now() : null, $accept ? $name : null, $doc['id']])->rowCount();
-        if ($changed !== 1) {
-            throw new HttpException(422, 'This quotation can no longer be answered.');
+        $signature = (string) $r->input('signature', '');
+        if ($accept) {
+            try {
+                \App\Services\SignatureService::validateImage($signature);
+            } catch (HttpException $e) {
+                Session::flash('error', $e->getMessage());
+                return Response::redirect('/p/quote/' . $token);
+            }
         }
+        // Conditional update: only the first response wins (prevents double-submits and replays).
+        App::db()->transaction(function () use ($accept, $name, $doc, $signature, $r) {
+            $changed = App::db()->query("UPDATE quotes SET status = ?, accepted_at = ?, accepted_by_name = ? WHERE id = ? AND status = 'Sent'", [$accept ? 'Accepted' : 'Declined', $accept ? DB::now() : null, $accept ? $name : null, $doc['id']])->rowCount();
+            if ($changed !== 1) {
+                throw new HttpException(422, 'This quotation can no longer be answered.');
+            }
+            if ($accept) {
+                \App\Services\SignatureService::sign('quotes', $doc, $name, filter_var($r->str('email'), FILTER_VALIDATE_EMAIL) ?: null, $signature);
+            }
+        });
         Auth::actingAs((int) ($doc['assigned_to'] ?? $doc['created_by'] ?? 0), (int) $doc['company_id'], function () use ($doc, $accept, $name, $r) {
             ActivityService::log('quotes', (int) $doc['id'], 'system', ($accept ? "Accepted online by $name" : 'Declined online') . ' from IP ' . $r->ip());
             $owner = (int) ($doc['assigned_to'] ?: $doc['created_by']);
@@ -191,5 +212,55 @@ final class PublicController extends Controller
             'background_color' => '#ffffff', 'theme_color' => '#4f46e5',
             'icons' => [['src' => asset('img/icon-192.png'), 'sizes' => '192x192', 'type' => 'image/png'], ['src' => asset('img/icon-512.png'), 'sizes' => '512x512', 'type' => 'image/png']],
         ], JSON_UNESCAPED_SLASHES), 200, ['Content-Type' => 'application/manifest+json']));
+    }
+
+    // ── Contracts: public review & e-signature ──
+    private function findContract(string $token): array
+    {
+        if (!preg_match('/^[A-Za-z0-9_\-]{20,64}$/', $token)) {
+            throw new HttpException(404);
+        }
+        $c = App::db()->one("SELECT * FROM contracts WHERE public_token = ? AND deleted_at IS NULL AND status <> 'Draft'", [$token]);
+        if (!$c) {
+            throw new HttpException(404);
+        }
+        return $c;
+    }
+
+    public function contract(Request $r, string $token): Response
+    {
+        $c = $this->findContract($token);
+        Session::start();
+        $db = App::db();
+        return Response::html(View::partial('public/contract', [
+            'c' => $c, 'token' => $token, 'company' => $db->find('companies', (int) $c['company_id']),
+            'customer' => $db->find('customers', (int) $c['customer_id']),
+            'signature' => \App\Services\SignatureService::forRecord('contracts', (int) $c['id']),
+            'flash' => Session::takeFlash(),
+        ]));
+    }
+
+    public function signContract(Request $r, string $token): Response
+    {
+        $c = $this->findContract($token);
+        Session::start();
+        try {
+            App::db()->transaction(function () use ($c, $r) {
+                $changed = App::db()->query('UPDATE contracts SET signed_at = ?, signed_by_name = ? WHERE id = ? AND signed_at IS NULL', [DB::now(), mb_substr(trim($r->str('name')), 0, 150), $c['id']])->rowCount();
+                if ($changed !== 1) {
+                    throw new HttpException(422, 'This contract has already been signed.');
+                }
+                \App\Services\SignatureService::sign('contracts', $c, $r->str('name'), filter_var($r->str('email'), FILTER_VALIDATE_EMAIL) ?: null, (string) $r->input('signature', ''));
+            });
+        } catch (HttpException $e) {
+            Session::flash('error', $e->getMessage());
+            return Response::redirect('/p/contract/' . $token);
+        }
+        Auth::actingAs((int) ($c['assigned_to'] ?: $c['created_by']), (int) $c['company_id'], function () use ($c, $r) {
+            ActivityService::log('contracts', (int) $c['id'], 'system', 'Signed online by ' . mb_substr(trim($r->str('name')), 0, 150) . ' from IP ' . $r->ip());
+            NotificationService::notify((int) ($c['assigned_to'] ?: $c['created_by']), 'contract.signed', 'Contract signed: ' . $c['title'], 'Signed by ' . mb_substr(trim($r->str('name')), 0, 150), '/r/contracts/' . $c['id'], (int) $c['company_id']);
+        });
+        Session::flash('success', 'Thank you. The contract has been signed.');
+        return Response::redirect('/p/contract/' . $token);
     }
 }

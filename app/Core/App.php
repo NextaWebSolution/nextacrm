@@ -46,8 +46,10 @@ final class App
                 }
             }
             Events::boot();
+            Extensions::boot();
             $router = new Router();
             require NX_ROOT . '/app/routes.php';
+            Extensions::registerRoutes($router);
             $response = $router->dispatch($request);
             $response->send();
         } catch (HttpException $e) {

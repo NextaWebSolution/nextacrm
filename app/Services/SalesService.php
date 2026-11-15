@@ -75,7 +75,11 @@ final class SalesService
                     throw new HttpException(422, 'The new total is lower than the amount already paid (' . number_format($paid, 2) . ').');
                 }
             }
-            $db->update($svc->table, $totals + ['discount_type' => $discType, 'discount_value' => $discValue, 'adjustment' => $adjust], ['id' => $rid]);
+            $extra = [];
+            if ($type === 'quote' && $old && ($old['approval_status'] ?? null) === 'approved' && abs((float) $totals['total'] - (float) $old['total']) > 0.004) {
+                $extra['approval_status'] = null; // the amount changed after approval → approve again
+            }
+            $db->update($svc->table, $totals + $extra + ['discount_type' => $discType, 'discount_value' => $discValue, 'adjustment' => $adjust], ['id' => $rid]);
             if ($type === 'invoice') {
                 self::recalcInvoice($rid);
             }
@@ -196,6 +200,9 @@ final class SalesService
             throw new HttpException(422, 'Invalid status.');
         }
         $data = ['status' => $status];
+        if ($type === 'quote') {
+            ApprovalService::guard('quotes', $data, App::db()->find('quotes', $id));
+        }
         if ($status === 'Sent' && empty($rec['sent_at'])) {
             $data['sent_at'] = DB::now();
         }
@@ -352,12 +359,18 @@ final class SalesService
                 $taxSummary[$k] = ($taxSummary[$k] ?? 0) + (float) $it['tax_amount'];
             }
         }
-        return ['type' => $type, 'doc' => $doc, 'items' => self::items($type, (int) $doc['id']), 'company' => $company, 'customer' => $customer, 'contact' => $contact, 'logo' => $logo, 'payments' => $payments, 'taxSummary' => $taxSummary];
+        return ['type' => $type, 'doc' => $doc, 'items' => self::items($type, (int) $doc['id']), 'company' => $company, 'customer' => $customer, 'contact' => $contact, 'logo' => $logo, 'payments' => $payments, 'taxSummary' => $taxSummary,
+            'signature' => $type === 'quote' ? SignatureService::forRecord('quotes', (int) $doc['id']) : null];
     }
 
     public static function pdf(string $type, array $doc): string
     {
-        $html = \App\Core\View::partial('documents/pdf', self::documentData($type, $doc));
+        return self::renderPdf(\App\Core\View::partial('documents/pdf', self::documentData($type, $doc)));
+    }
+
+    /** Renders trusted, escaped HTML to PDF with remote resources, PHP and JS disabled. */
+    public static function renderPdf(string $html): string
+    {
         if (!class_exists(\Dompdf\Dompdf::class)) {
             return $html;
         }

@@ -28,7 +28,7 @@ final class Permissions
             'files' => 'Files & documents',
             'workflows' => 'Automation',
             'settings' => 'Settings',
-        ];
+        ] + \App\Core\Extensions::permissions();
     }
 
     public static function modules(): array
@@ -149,7 +149,7 @@ final class Permissions
         $teamRW = ['view' => 'team', 'create' => true, 'edit' => 'team', 'delete' => 'own', 'export' => true, 'import' => false, 'approve' => false, 'assign' => true, 'manage' => false];
         $ownRW = ['view' => 'own', 'create' => true, 'edit' => 'own', 'delete' => 'none', 'export' => false, 'import' => false, 'approve' => false, 'assign' => false, 'manage' => false];
         $read = ['view' => 'all', 'create' => false, 'edit' => 'none', 'delete' => 'none', 'export' => false, 'import' => false, 'approve' => false, 'assign' => false, 'manage' => false];
-        $base = ['dashboard' => $read, 'calendar' => $ownRW, 'files' => ['view' => 'all', 'create' => true, 'edit' => 'own', 'delete' => 'own']];
+        $base = ['dashboard' => $read, 'calendar' => $ownRW, 'files' => ['view' => 'all', 'create' => true, 'edit' => 'own', 'delete' => 'own'], 'attendance' => ['view' => 'own']];
 
         $sales = ['leads', 'deals', 'customers', 'contacts', 'quotes'];
         $delivery = ['projects', 'tasks', 'time_entries', 'milestones'];
@@ -159,12 +159,12 @@ final class Permissions
 
         $mods = array_merge($sales, $delivery, $support, $finance, $hr, ['events', 'reports', 'workflows']);
         return [
-            'Manager' => ['description' => 'Full access to business records of their teams, approvals and reports.', 'permissions' => $base + $all($mods, $teamRW + ['approve' => true, 'import' => true]) + ['reports' => $read, 'workflows' => $full]],
+            'Manager' => ['description' => 'Full access to business records of their teams, approvals and reports.', 'permissions' => ['attendance' => $read] + $base + $all($mods, $teamRW + ['approve' => true, 'import' => true]) + ['reports' => $read, 'workflows' => $full]],
             'Sales' => ['description' => 'Leads, deals, customers, contacts and quotations.', 'permissions' => $base + $all($sales, $teamRW) + $all(['products'], $read) + ['tasks' => $ownRW, 'events' => $ownRW, 'invoices' => ['view' => 'team'] + $read, 'reports' => $read]],
             'Project Member' => ['description' => 'Assigned projects, tasks and own time entries.', 'permissions' => $base + ['projects' => ['view' => 'team'] + $read, 'milestones' => ['view' => 'team'] + $read, 'tasks' => $teamRW, 'time_entries' => $ownRW, 'events' => $ownRW, 'kb_articles' => $read, 'leave_requests' => $ownRW]],
             'Support Agent' => ['description' => 'Tickets, knowledge base and customer look-up.', 'permissions' => $base + $all($support, $teamRW) + ['customers' => $read, 'contacts' => $read, 'tasks' => $ownRW, 'events' => $ownRW, 'leave_requests' => $ownRW]],
-            'Accountant' => ['description' => 'Invoices, payments, expenses and financial reports.', 'permissions' => $base + $all($finance, $full) + ['customers' => $read, 'projects' => $read, 'time_entries' => $read, 'reports' => $read, 'quotes' => $read]],
-            'HR' => ['description' => 'Employees, departments and leave approvals.', 'permissions' => $base + $all($hr, $full) + ['events' => $ownRW]],
+            'Accountant' => ['description' => 'Invoices, payments, expenses and financial reports.', 'permissions' => $base + $all($finance, $full) + ['payroll' => ['view' => 'all', 'approve' => true], 'customers' => $read, 'projects' => $read, 'time_entries' => $read, 'reports' => $read, 'quotes' => $read]],
+            'HR' => ['description' => 'Employees, departments and leave approvals.', 'permissions' => ['attendance' => $full, 'payroll' => $full] + $base + $all($hr, $full) + ['events' => $ownRW]],
         ];
     }
 }

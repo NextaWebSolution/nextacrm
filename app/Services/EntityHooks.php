@@ -15,6 +15,9 @@ use App\Core\HttpException;
  */
 final class EntityHooks
 {
+    /** Set while recording a payment a gateway has already collected (overpayment is then recorded, not refused). */
+    public static bool $gatewayPayment = false;
+
     public static function before(RecordService $svc, array &$data, ?array $old): void
     {
         $m = 'before_' . $svc->entity;
@@ -115,6 +118,7 @@ final class EntityHooks
     // ── Quotes & invoices (generic edits only; line items handled by SalesService) ──
     private static function before_quotes(RecordService $svc, array &$data, ?array $old): void
     {
+        ApprovalService::guard('quotes', $data, $old);
         if (!$old) {
             $data['number'] ??= CompanyService::nextNumber('quote');
             $data['issue_date'] ??= date('Y-m-d');
@@ -156,7 +160,7 @@ final class EntityHooks
         $amount = (float) ($data['amount'] ?? $old['amount'] ?? 0);
         $paidOthers = (float) $db->value('SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id = ? AND deleted_at IS NULL AND id <> ?', [$invoiceId, (int) ($old['id'] ?? 0)]);
         $remaining = round((float) $inv['total'] - $paidOthers, 2);
-        if ($amount - $remaining > 0.004) {
+        if ($amount - $remaining > 0.004 && !self::$gatewayPayment) {
             throw new HttpException(422, '', ['amount' => 'Amount exceeds the outstanding balance (' . number_format(max(0, $remaining), 2) . ').']);
         }
         $data['customer_id'] = $inv['customer_id'];
@@ -232,10 +236,41 @@ final class EntityHooks
 
     private static function after_tasks(RecordService $svc, array $record, ?array $old): void
     {
+        if ($record['status'] === 'Done' && (!$old || $old['status'] !== 'Done') && !empty($record['recurrence'])) {
+            self::spawnRecurringTask($record);
+        }
         self::recalcProject((int) $record['project_id']);
         if ($old && (int) $old['project_id'] !== (int) $record['project_id']) {
             self::recalcProject((int) $old['project_id']);
         }
+    }
+
+    /** Creates the next occurrence of a repeating task (once per completed task). */
+    private static function spawnRecurringTask(array $t): void
+    {
+        $db = App::db();
+        if ($db->value('SELECT id FROM tasks WHERE recurred_from = ? AND deleted_at IS NULL', [(int) $t['id']])) {
+            return;
+        }
+        $step = ['Daily' => '+1 day', 'Weekly' => '+1 week', 'Monthly' => '+1 month', 'Quarterly' => '+3 months', 'Yearly' => '+1 year'][$t['recurrence']] ?? null;
+        if (!$step) {
+            return;
+        }
+        $shift = fn (?string $d) => $d ? date('Y-m-d', (int) strtotime($d . ' ' . $step)) : null;
+        $due = $shift($t['due_date']) ?? date('Y-m-d', (int) strtotime('today ' . $step));
+        if (!empty($t['recur_until']) && $due > $t['recur_until']) {
+            return;
+        }
+        $checklist = json_decode((string) ($t['checklist'] ?? ''), true);
+        $checklist = is_array($checklist) ? array_map(fn ($i) => ['t' => (string) ($i['t'] ?? ''), 'd' => false], $checklist) : null;
+        $copy = array_intersect_key($t, array_flip(['company_id', 'title', 'project_id', 'milestone_id', 'parent_id', 'related_entity', 'related_id', 'priority', 'estimate_hours', 'is_billable', 'tags', 'description', 'recurrence', 'recur_until', 'assigned_to', 'custom']));
+        $now = DB::now();
+        $id = $db->insert('tasks', $copy + [
+            'status' => 'To Do', 'start_date' => $shift($t['start_date']), 'due_date' => $due, 'progress' => 0, 'spent_hours' => 0,
+            'checklist' => $checklist ? json_encode($checklist) : null, 'recurred_from' => (int) $t['id'],
+            'created_by' => Auth::id() ?: $t['created_by'], 'updated_by' => Auth::id() ?: null, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        ActivityService::log('tasks', (int) $t['id'], 'system', 'Next occurrence created: task #' . $id . ' due ' . $due);
     }
 
     public static function recalcProject(int $projectId): void
@@ -366,6 +401,7 @@ final class EntityHooks
 
     private static function before_expenses(RecordService $svc, array &$data, ?array $old): void
     {
+        ApprovalService::guard('expenses', $data, $old);
         if (!$old && empty($data['currency'])) {
             $data['currency'] = CompanyService::currentCurrency();
         }
@@ -373,6 +409,9 @@ final class EntityHooks
 
     private static function before_contracts(RecordService $svc, array &$data, ?array $old): void
     {
+        if ($old && array_key_exists('end_date', $data) && $data['end_date'] !== $old['end_date']) {
+            $data['renewal_notified_at'] = null; // new term → remind again
+        }
         $start = $data['start_date'] ?? $old['start_date'] ?? null;
         $end = $data['end_date'] ?? $old['end_date'] ?? null;
         if ($start && $end && $end < $start) {

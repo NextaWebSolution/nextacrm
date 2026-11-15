@@ -32,7 +32,7 @@ final class View
         if (!preg_match('#^[a-z0-9_\-/]+$#', $template)) {
             throw new \InvalidArgumentException('Invalid template name');
         }
-        $file = NX_ROOT . '/app/Views/' . $template . '.php';
+        $file = Extensions::viewPath($template) ?? NX_ROOT . '/app/Views/' . $template . '.php';
         if (!is_file($file)) {
             throw new \RuntimeException("View not found: $template");
         }

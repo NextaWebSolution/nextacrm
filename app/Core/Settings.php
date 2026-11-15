@@ -17,6 +17,8 @@ final class Settings
     public const SECRET_KEYS = [
         'mail.smtp_password', 'storage.s3.secret', 'storage.wasabi.secret', 'storage.s3c.secret',
         'storage.ftp.password', 'storage.sftp.password', 'storage.sftp.private_key', 'cron.key',
+        'pay.razorpay.key_secret', 'pay.razorpay.webhook_secret', 'pay.stripe.secret_key', 'pay.stripe.webhook_secret', 'pay.paypal.client_secret',
+        'wa.meta.token', 'wa.twilio.token', 'wa.gupshup.api_key', 'ai.anthropic.key', 'ai.openai.key', 'ai.custom.key',
     ];
 
     public static function defaults(): array
@@ -45,7 +47,7 @@ final class Settings
             'storage.driver' => 'local',
             'storage.signed_urls' => false,
             'picklist.lead_status' => ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Negotiation', 'Converted', 'Lost'],
-            'picklist.lead_source' => ['Website', 'Referral', 'LinkedIn', 'Google Ads', 'Facebook', 'Cold Call', 'Email Campaign', 'Event', 'Partner', 'Upwork', 'Other'],
+            'picklist.lead_source' => ['Website', 'Referral', 'LinkedIn', 'Google Ads', 'Facebook', 'Cold Call', 'Email', 'Email Campaign', 'WhatsApp', 'Client portal', 'Event', 'Partner', 'Upwork', 'Other'],
             'picklist.industry' => ['Information Technology', 'E-commerce', 'Healthcare', 'Education', 'Finance', 'Real Estate', 'Manufacturing', 'Retail', 'Travel & Hospitality', 'Media', 'Non-profit', 'Government', 'Other'],
             'picklist.customer_type' => ['Prospect', 'Customer', 'Partner', 'Vendor', 'Reseller'],
             'picklist.task_status' => ['To Do', 'In Progress', 'In Review', 'Blocked', 'Done'],

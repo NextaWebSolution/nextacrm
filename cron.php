@@ -35,5 +35,6 @@ if (PHP_SAPI !== 'cli') {
 }
 
 \App\Core\Events::boot();
+\App\Core\Extensions::boot();
 $report = \App\Services\CronService::run();
 echo json_encode(['ok' => true, 'at' => gmdate('c'), 'jobs' => $report], JSON_PRETTY_PRINT) . "\n";

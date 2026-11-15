@@ -45,6 +45,12 @@ final class WorkflowService
         'webhook' => 'Call a webhook URL',
     ];
 
+    /** Built-in actions plus those registered by features and modules. */
+    public static function actions(): array
+    {
+        return self::ACTIONS + array_map(fn ($a) => $a['label'], \App\Core\Extensions::workflowActions());
+    }
+
     /** Event listener for record events. */
     public static function onEvent(string $event, array $p): void
     {
@@ -227,6 +233,10 @@ final class WorkflowService
                 $payload = json_encode(['workflow' => $wf['name'], 'entity' => $entity, 'record' => self::publicRecord($entity, $record)], JSON_UNESCAPED_UNICODE);
                 $res = (new HttpClient())->request('POST', $url, ['Content-Type: application/json'], (string) $payload);
                 return $res['error'] ? 'Webhook failed: ' . $res['error'] : 'Webhook responded ' . $res['status'];
+        }
+        $ext = \App\Core\Extensions::workflowActions()[$type] ?? null;
+        if ($ext) {
+            return (string) ($ext['run'])($wf, $entity, $record, $a);
         }
         return 'Skipped: unknown action';
     }

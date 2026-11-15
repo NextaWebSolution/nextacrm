@@ -1,48 +1,202 @@
 {
   "name": "NextaCRM",
   "slug": "nextacrm",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "release_date": "2026-11-15",
   "channel": "stable",
   "description": "All-in-one IT business management CRM: leads, deals, quotations, invoices, projects, tasks, time tracking, support tickets with SLA, HR, calendar, files, automation and REST API. Runs on standard cPanel hosting.",
-  "vendor": { "name": "Nexta Web Solution Pvt. Ltd.", "url": "https://nextawebsolution.com", "support": "hr@nextawebsolution.com" },
+  "vendor": {
+    "name": "Nexta Web Solution Pvt. Ltd.",
+    "url": "https://nextawebsolution.com",
+    "support": "hr@nextawebsolution.com"
+  },
   "license": "Proprietary",
   "requirements": {
     "php": "8.2.0",
     "php_recommended": "8.3.0",
-    "database": { "mysql": "8.0", "mariadb": "10.6" },
-    "web_server": ["Apache 2.4 with mod_rewrite", "LiteSpeed", "Nginx (see docs/INSTALL.md)"],
-    "extensions": ["pdo", "pdo_mysql", "mbstring", "json", "openssl", "curl", "fileinfo", "zip", "sodium", "dom", "ctype", "filter", "hash", "session"],
+    "database": {
+      "mysql": "8.0",
+      "mariadb": "10.6"
+    },
+    "web_server": [
+      "Apache 2.4 with mod_rewrite",
+      "LiteSpeed",
+      "Nginx (see docs/INSTALL.md)"
+    ],
+    "extensions": [
+      "pdo",
+      "pdo_mysql",
+      "mbstring",
+      "json",
+      "openssl",
+      "curl",
+      "fileinfo",
+      "zip",
+      "sodium",
+      "dom",
+      "ctype",
+      "filter",
+      "hash",
+      "session"
+    ],
     "optional_extensions": {
       "gd": "image checks and PDF images",
       "intl": "better locale formatting",
       "ftp": "FTP storage driver",
       "opcache": "performance"
     },
-    "writable": ["config", "storage", "storage/uploads", "storage/logs", "storage/cache", "storage/tmp", "storage/backups", "storage/sessions"],
-    "not_required": ["root SSH", "Docker", "Node.js", "Redis", "Supervisor", "Composer"]
+    "writable": [
+      "config",
+      "storage",
+      "storage/uploads",
+      "storage/logs",
+      "storage/cache",
+      "storage/tmp",
+      "storage/backups",
+      "storage/sessions"
+    ],
+    "not_required": [
+      "root SSH",
+      "Docker",
+      "Node.js",
+      "Redis",
+      "Supervisor",
+      "Composer"
+    ]
   },
   "modules": [
-    { "key": "leads", "name": "Leads", "group": "Sales", "default": true },
-    { "key": "deals", "name": "Deals & pipelines", "group": "Sales", "default": true },
-    { "key": "customers", "name": "Customers", "group": "Sales", "default": true },
-    { "key": "contacts", "name": "Contacts", "group": "Sales", "default": true },
-    { "key": "quotes", "name": "Quotations", "group": "Sales", "default": true },
-    { "key": "projects", "name": "Projects", "group": "Delivery", "default": true },
-    { "key": "milestones", "name": "Milestones", "group": "Delivery", "default": true },
-    { "key": "tasks", "name": "Tasks", "group": "Delivery", "default": true },
-    { "key": "time_entries", "name": "Timesheets", "group": "Delivery", "default": true },
-    { "key": "tickets", "name": "Support tickets & SLA", "group": "Support", "default": true },
-    { "key": "kb_articles", "name": "Knowledge base", "group": "Support", "default": true },
-    { "key": "invoices", "name": "Invoices & recurring billing", "group": "Finance", "default": true },
-    { "key": "payments", "name": "Payments", "group": "Finance", "default": true },
-    { "key": "expenses", "name": "Expenses", "group": "Finance", "default": true },
-    { "key": "products", "name": "Products & services", "group": "Finance", "default": true },
-    { "key": "contracts", "name": "Contracts", "group": "Finance", "default": true },
-    { "key": "employees", "name": "Employees", "group": "Team", "default": true },
-    { "key": "departments", "name": "Departments", "group": "Team", "default": true },
-    { "key": "leave_requests", "name": "Leave management", "group": "Team", "default": true },
-    { "key": "events", "name": "Calendar & meetings", "group": "Overview", "default": true }
+    {
+      "key": "leads",
+      "name": "Leads",
+      "group": "Sales",
+      "default": true
+    },
+    {
+      "key": "deals",
+      "name": "Deals & pipelines",
+      "group": "Sales",
+      "default": true
+    },
+    {
+      "key": "customers",
+      "name": "Customers",
+      "group": "Sales",
+      "default": true
+    },
+    {
+      "key": "contacts",
+      "name": "Contacts",
+      "group": "Sales",
+      "default": true
+    },
+    {
+      "key": "quotes",
+      "name": "Quotations",
+      "group": "Sales",
+      "default": true
+    },
+    {
+      "key": "projects",
+      "name": "Projects",
+      "group": "Delivery",
+      "default": true
+    },
+    {
+      "key": "milestones",
+      "name": "Milestones",
+      "group": "Delivery",
+      "default": true
+    },
+    {
+      "key": "tasks",
+      "name": "Tasks",
+      "group": "Delivery",
+      "default": true
+    },
+    {
+      "key": "time_entries",
+      "name": "Timesheets",
+      "group": "Delivery",
+      "default": true
+    },
+    {
+      "key": "tickets",
+      "name": "Support tickets & SLA",
+      "group": "Support",
+      "default": true
+    },
+    {
+      "key": "kb_articles",
+      "name": "Knowledge base",
+      "group": "Support",
+      "default": true
+    },
+    {
+      "key": "invoices",
+      "name": "Invoices & recurring billing",
+      "group": "Finance",
+      "default": true
+    },
+    {
+      "key": "payments",
+      "name": "Payments",
+      "group": "Finance",
+      "default": true
+    },
+    {
+      "key": "expenses",
+      "name": "Expenses",
+      "group": "Finance",
+      "default": true
+    },
+    {
+      "key": "products",
+      "name": "Products & services",
+      "group": "Finance",
+      "default": true
+    },
+    {
+      "key": "contracts",
+      "name": "Contracts",
+      "group": "Finance",
+      "default": true
+    },
+    {
+      "key": "employees",
+      "name": "Employees",
+      "group": "Team",
+      "default": true
+    },
+    {
+      "key": "departments",
+      "name": "Departments",
+      "group": "Team",
+      "default": true
+    },
+    {
+      "key": "leave_requests",
+      "name": "Leave management",
+      "group": "Team",
+      "default": true
+    },
+    {
+      "key": "events",
+      "name": "Calendar & meetings",
+      "group": "Overview",
+      "default": true
+    },
+    {
+      "key": "attendance",
+      "name": "Attendance",
+      "group": "Team",
+      "default": true
+    },
+    {
+      "key": "payroll",
+      "name": "Payroll",
+      "group": "Team",
+      "default": true
+    }
   ],
   "storage_drivers": {
     "local": "Local server (storage/uploads)",
@@ -54,7 +208,19 @@
   },
   "installer": {
     "entry": "/ (automatic until storage/installed.lock exists)",
-    "steps": ["Welcome", "System requirements", "PHP extensions", "Database configuration", "Database connection test", "Application URL", "Administrator account", "Company configuration", "Initial database migration", "Default module installation", "Completion"],
+    "steps": [
+      "Welcome",
+      "System requirements",
+      "PHP extensions",
+      "Database configuration",
+      "Database connection test",
+      "Application URL",
+      "Administrator account",
+      "Company configuration",
+      "Initial database migration",
+      "Default module installation",
+      "Completion"
+    ],
     "lock_file": "storage/installed.lock",
     "config_file": "config/config.php"
   },
@@ -65,12 +231,26 @@
     "public_key": "JC4DfGpcO71dARJ0WS9i8gLt1onKDcYYlByfFDIUWIY="
   },
   "release": {
-    "version": "1.0.0",
-    "notes": "First production release.",
-    "database_schema": "0001_initial"
+    "version": "2.0.0",
+    "notes": "Client portal, online payments (Razorpay, Stripe, PayPal), e-signatures, e-mail-to-ticket, WhatsApp, public help centre, recurring tasks, checklists, Gantt, contract renewals, e-mail sequences, report builder, approval chains, attendance & payroll, AI assistant and the module marketplace.",
+    "database_schema": "0003_v2_features"
   },
   "compatibility": {
-    "browsers": ["Chrome 111+", "Edge 111+", "Firefox 113+", "Safari 16.4+", "iOS Safari 16.4+", "Chrome Android"],
-    "upgrade_from": []
+    "browsers": [
+      "Chrome 111+",
+      "Edge 111+",
+      "Firefox 113+",
+      "Safari 16.4+",
+      "iOS Safari 16.4+",
+      "Chrome Android"
+    ],
+    "upgrade_from": [
+      "1.0.0",
+      "1.0.1"
+    ]
+  },
+  "marketplace": {
+    "catalog": "https://updates.nextawebsolution.com/nextacrm/modules/catalog.json",
+    "signature": "ed25519 over 'nextacrm-module|<slug>|<version>|<sha256>' (same key as updates)"
   }
 }

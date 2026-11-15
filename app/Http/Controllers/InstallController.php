@@ -65,6 +65,12 @@ final class InstallController
     private function dbConfig(array $in): array
     {
         $db = (array) ($in['db'] ?? []);
+        // Developer/CI only: the server environment (never the request) can point the installer at SQLite so
+        // the full web wizard can be exercised without a MySQL server. Production hosts never set this.
+        $sqlite = (string) getenv('NEXTACRM_INSTALL_SQLITE');
+        if ($sqlite !== '' && PHP_SAPI === 'cli-server' && str_ends_with($sqlite, '.sqlite')) {
+            return ['driver' => 'sqlite', 'database' => $sqlite, 'host' => '', 'port' => 0, 'username' => 'sqlite', 'password' => ''];
+        }
         return [
             'driver' => 'mysql',
             'host' => trim((string) ($db['host'] ?? 'localhost')) ?: 'localhost',

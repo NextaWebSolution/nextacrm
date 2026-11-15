@@ -141,3 +141,51 @@ In transit: HTTPS with HSTS and `force_https`; SMTP via TLS when configured; S3 
 - Dompdf 3.1.6 security release and advisories: https://github.com/dompdf/dompdf/releases/tag/v3.1.6
 - phpseclib advisories: https://github.com/phpseclib/phpseclib/security/advisories
 - PHPMailer releases: https://github.com/PHPMailer/PHPMailer/releases
+
+---
+
+# Addendum — v2.0 security review (15 November 2026)
+
+Scope: every feature added in 2.0 (portal, payments, e-sign, inbox, WhatsApp, help centre, sequences, report builder, approvals, attendance, payroll, AI assistant, module marketplace) plus the updater and installer changes. Method: code review against the same checklist as v1.0, an automated attacker suite (`tests/attack_v2.py`, 47 checks) on top of the v1 suite (`tests/attack.py`, 99 checks), unit tests (68), end-to-end tests, a class-loading check of all 124 classes, and browser-driven installer and upgrade tests.
+
+## Controls by feature
+
+| Area | Threat | Control (verified) |
+|---|---|---|
+| Client portal | Contact reads another customer's data (IDOR) | Every portal query filters on `company_id` **and** the contact's `customer_id`; tested for invoices, PDFs, tickets, replies |
+| | Session confusion between staff and portal | Separate session key and `portal_sessions` table (hashed token, idle + absolute timeout, user-agent binding); staff session can't open the portal and vice versa |
+| | Credential stuffing | Argon2id passwords, per-email + per-IP lockout, constant-time path for unknown e-mails, throttled reset/activate |
+| | Leaking internal notes | Internal ticket replies excluded in SQL |
+| Payments | Forged / replayed webhooks | Razorpay HMAC-SHA256, Stripe `t=,v1=` HMAC with 5-minute tolerance, PayPal verify-webhook-signature API; event IDs stored with a unique index; payment IDs unique per gateway; attempt rows locked during completion |
+| | Amount tampering / under-payment | Recorded amount always comes from our own attempt row; gateway amount and currency must match exactly or the attempt goes to manual review |
+| | Currency unit errors | Minor units per ISO 4217 exponent (zero- and three-decimal currencies) |
+| | Secret exposure | Keys encrypted at rest (`SECRET_KEYS`), never rendered; webhook URL is per company |
+| E-signature | Fake / empty signatures, stored XSS | PNG only, size and dimension limits, minimum ink check, name escaped everywhere; document SHA-256 stored with signer, IP, UA and time; one response per document (conditional update in a transaction) |
+| Sequences | Unsubscribe link abuse | HMAC-signed token (company + e-mail), GET only shows a confirmation, POST with CSRF performs the opt-out |
+| Inbox | Mail loops, header injection, HTML in tickets | Auto-reply/bulk detection, own-address skip, Message-ID dedupe; HTML converted to text; reply-to built from settings only |
+| Help centre | XSS through Markdown | `markdown_safe()` escapes all HTML, allows only http(s)/mailto links (tested with `javascript:` and `<script>`) |
+| Report builder | Field/SQL injection, cross-tenant data | Fields, operators and aggregates whitelisted from entity metadata; all queries through `RecordService::baseWhere` (tenant + permission scope); scheduled reports run as their creator |
+| Approvals | Self-approval, bypass by editing | Requester can't decide; approver must match role/user of the current step; decisions locked with `SELECT … FOR UPDATE`; `approval_status` is not client-writable; total changes reset approval |
+| Attendance & payroll | Salary data exposure | New `attendance`/`payroll` permissions; salary, PAN, UAN and bank fields marked sensitive (`manage`); users can only download their own payslips unless they hold payroll view |
+| AI assistant | Data leakage to a third party, prompt injection, SSRF | Only the viewed record after a permission check; sensitive fields never sent; e-mails/phones masked by default; record text passed as quoted data with an instruction to ignore embedded instructions; plain-text output only; private network targets blocked unless an admin enables them; daily limit and usage log |
+| Modules | Malicious or tampered packages | Ed25519 signature required (developer mode is install-wide, typed confirmation, and disables unsigned modules when turned off); all entries validated before extraction (no `..`, absolute paths, symlinks or unexpected extensions); staged extraction; per-module `Require all denied`; failing modules auto-disabled |
+| Updater | Tampered package, partial update | Ed25519 + SHA-256, unsafe path rejection, maintenance mode, pre-update backup, `config/`, `storage/` and `modules/` preserved, stale files pruned; tested 1.0.1 → 2.0.0 → 2.0.1 with tamper attempts |
+| Installer | Re-installation over a live site | Locked by `storage/installed.lock`; refuses to run if `config/config.php` exists; dev-only SQLite switch works only with the PHP built-in server and an environment variable |
+
+## Issues found and fixed during this review
+
+| # | Severity | Issue | Fix |
+|---|---|---|---|
+| V2-1 | High (availability) | `PaymentController::back()` clashed with the base controller method — every payment route returned a fatal error | Renamed to `returned()`; added `tests/load_all.php`, which loads every class to catch this class of error |
+| V2-2 | High (financial) | Gateway amounts always multiplied by 100 — JPY/KRW would be charged 100×, KWD/BHD under-charged | ISO 4217 exponent-aware conversion for Razorpay and Stripe; PayPal decimal precision per currency |
+| V2-3 | Medium | Blank signature pads were accepted | Minimum ink check (with GD) |
+| V2-4 | Low | `examples/` directory reachable from the web | Blocked in `.htaccess`, Nginx sample and test router |
+| V2-5 | Low | Attendance marked one day absent and treated all unmarked days as absent (unexpected loss of pay) | Unmarked days count as present unless "strict mode" is enabled |
+| V2-6 | Low | AI daily-limit check ran before the permission check (minor information leak via error type) | Permission/tenant check first |
+
+## Residual risks and limits
+
+- **MySQL / MariaDB were not available in the build environment.** All automated suites ran on SQLite; the MySQL DDL is generated and unit-checked (InnoDB/utf8mb4, index name lengths) but the 2.0 installer and the 1.0.1 → 2.0.0 migration must be run once on a MySQL 8 / MariaDB 10.6 staging site before production rollout.
+- Gateway, WhatsApp, IMAP and AI provider calls were tested with signed fixtures and local mocks; live sandbox credentials were not available. Run one sandbox payment per gateway after configuring keys.
+- Modules run with full application privileges by design; the signature is the trust boundary.
+- AI providers receive the minimised record text; customers in regulated sectors should review their provider's data-processing terms before enabling it.
