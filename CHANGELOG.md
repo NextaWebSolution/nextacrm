@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1 — 16 November 2026
+
+**Fixes**
+- Installing with demo data failed on Mondays: the sample leave request ran from "next Monday" to "next Tuesday", which on a Monday puts the end date before the start date. The end date is now always the day after the start. (Also present in 1.0.x.)
+
 ## 2.0.0 — 15 November 2026
 
 Everything planned for v1.1, v1.2 and v2.0 ships in this release. Upgrading from 1.0.x is automatic: the updater installs the files and migration `0003_v2_features` adds 22 tables and 23 columns without touching existing data.

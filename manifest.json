@@ -1,8 +1,8 @@
 {
   "name": "NextaCRM",
   "slug": "nextacrm",
-  "version": "2.0.0",
-  "release_date": "2026-11-15",
+  "version": "2.0.1",
+  "release_date": "2026-11-16",
   "channel": "stable",
   "description": "All-in-one IT business management CRM: leads, deals, quotations, invoices, projects, tasks, time tracking, support tickets with SLA, HR, calendar, files, automation and REST API. Runs on standard cPanel hosting.",
   "vendor": {
@@ -231,8 +231,8 @@
     "public_key": "JC4DfGpcO71dARJ0WS9i8gLt1onKDcYYlByfFDIUWIY="
   },
   "release": {
-    "version": "2.0.0",
-    "notes": "Client portal, online payments (Razorpay, Stripe, PayPal), e-signatures, e-mail-to-ticket, WhatsApp, public help centre, recurring tasks, checklists, Gantt, contract renewals, e-mail sequences, report builder, approval chains, attendance & payroll, AI assistant and the module marketplace.",
+    "version": "2.0.1",
+    "notes": "Fixes installation with demo data failing on Mondays.",
     "database_schema": "0003_v2_features"
   },
   "compatibility": {
@@ -246,7 +246,8 @@
     ],
     "upgrade_from": [
       "1.0.0",
-      "1.0.1"
+      "1.0.1",
+      "2.0.0"
     ]
   },
   "marketplace": {
