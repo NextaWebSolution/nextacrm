@@ -114,20 +114,32 @@ unzip -l dist/nextacrm-<version>.zip | grep -E "config/config.php|\.sqlite|secre
 
 ## 7. Publish
 
-1. Upload `nextacrm-<version>.zip` **first**, then `latest.json`, to the update server URL from `manifest.json` → `update.server` (`https://updates.nextawebsolution.com/nextacrm/`). Uploading `latest.json` last means customers never see a version whose ZIP is not there yet.
-2. Tag and push the source:
+Releases are published to the **Nexta Update Hub** (`https://updates.nextawebsolution.com`, repository `NextaWebSolution/nexta-updates`). The hub verifies the signature against NextaCRM's public key, stores the ZIP, and updates `/nextacrm/latest.json` immediately. It never needs the signing key.
+
+1. Publish with a publish token (Hub admin → NextaCRM → Publish tokens), kept in your password manager:
+
+   ```bash
+   export NEXTA_HUB_TOKEN=nxu_…
+   php ../nexta-updates/tools/publish.php release --hub=https://updates.nextawebsolution.com --product=nextacrm \
+       --zip=dist/nextacrm-<version>.zip --meta=dist/latest.json --notes-file=NOTES.md
+   ```
+   Add `--channel=beta` for a pre-release, and `--min-upgrade-from=X.Y.Z` when installations older than X.Y.Z must take an intermediate release first. You can also use the hub admin page (**Upload a release**: ZIP plus `latest.json`).
+2. Check `https://updates.nextawebsolution.com/nextacrm/latest.json` and update a staging site with **Check for updates**.
+3. Tag and push the source:
 
    ```bash
    git add -A && git commit -m "Release 2.1.0"
    git tag -a v2.1.0 -m "NextaCRM 2.1.0"
    git push origin main --tags
    ```
-3. Create the GitHub release from the tag and attach the ZIP (and `latest.json`) so customers can update manually.
+4. Create the GitHub release from the tag and attach the ZIP.
+
+Modules: `php tools/build-module.php … --key-file=…`, then `php ../nexta-updates/tools/publish.php module --hub=… --product=nextacrm --zip=… --sig=…`.
 
 ## 8. After release
 
 - Watch `storage/logs` on your own production install and the support inbox for 48 hours.
-- If something is wrong: fix forward with a patch release (2.1.1). Never replace a published ZIP under the same version number — installations cache the SHA-256 in `latest.json`.
+- If something is wrong: **withdraw** the version on the hub (installations stop being offered it within ~5 minutes) and fix forward with a patch release (2.1.1). The hub refuses to replace a published version.
 - Customers who need to roll back restore the automatic backup from `storage/backups/pre-update-<old-version>-<date>.zip` (files) plus their database backup.
 
 ---
@@ -140,7 +152,7 @@ Modules are versioned independently:
 php tools/build-module.php path/to/module --key-file=/secure/offline/signing.secret --out=dist/modules
 ```
 
-Upload `<slug>-<version>.zip` and add the generated `<slug>.json` entry to `modules/catalog.json` on the update server (`manifest.json` → `marketplace.catalog`). See `docs/MODULES.md`.
+Publish the ZIP and `.sig` with the hub's `tools/publish.php module` (see section 7). The hub rebuilds `/nextacrm/modules/catalog.json` automatically. See `docs/MODULES.md`.
 
 ## Quick checklist
 
@@ -152,4 +164,4 @@ Upload `<slug>-<version>.zip` and add the generated `<slug>.json` entry to `modu
 - [ ] Upgrade test from the previous release (+ tamper tests)
 - [ ] MySQL/MariaDB staging install + upgrade
 - [ ] `tools/release.php` with the offline key; package contents checked
-- [ ] Upload ZIP, then `latest.json`; tag + push + GitHub release
+- [ ] Publish to the update hub (`tools/publish.php`); verify `latest.json`; tag + push + GitHub release
