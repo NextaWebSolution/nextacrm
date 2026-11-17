@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.2 — 17 November 2026
+
+**Improvements**
+- Updates and marketplace modules can be downloaded from GitHub release assets, tag archives and other hosts that answer with a redirect. Each redirect is checked again: public addresses only, no switch from HTTPS to HTTP, at most 5 hops. The package's SHA-256 and Ed25519 signature are verified as before.
+
+**Note for publishers**
+- Installations older than 2.0.2 can't follow redirects. On the update hub, NextaCRM's "first version whose updater follows redirects" is set to 2.0.2, so older installations are offered a hub-hosted release first.
+
 ## 2.0.1 — 16 November 2026
 
 **Fixes**

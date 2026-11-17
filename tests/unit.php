@@ -109,4 +109,13 @@ $t('currency: float noise does not lose a cent', GW::minor(19.99, 'USD') === 199
 $md = markdown_safe("# T\n<script>alert(1)</script> [x](javascript:alert(1)) **b** `<i>`");
 $t('markdown_safe: no raw script, no javascript: links', !str_contains($md, '<script') && !preg_match('/href="\s*javascript/i', $md));
 $t('markdown_safe: formatting kept', str_contains($md, '<strong>b</strong>') && str_contains($md, '<h'));
+
+// ── 2.0.2: redirect handling for GitHub downloads ──
+use App\Core\HttpClient as HC;
+$t('redirect: absolute https kept', HC::absoluteUrl('https://github.com/a/b', 'https://objects.githubusercontent.com/x?y=1') === 'https://objects.githubusercontent.com/x?y=1');
+$t('redirect: root-relative resolved', HC::absoluteUrl('https://github.com/a/b/c.zip', '/d/e.zip') === 'https://github.com/d/e.zip');
+$t('redirect: relative resolved', HC::absoluteUrl('https://h.test/a/b/c.zip', 'd.zip') === 'https://h.test/a/b/d.zip');
+$t('redirect: protocol-relative keeps scheme', HC::absoluteUrl('https://h.test/a', '//cdn.test/x') === 'https://cdn.test/x');
+$t('redirect: header injection refused', HC::absoluteUrl('https://h.test/a', "https://x.test/\r\nSet-Cookie: a=b") === null);
+$t('redirect: private target still blocked', HC::isBlockedIp('127.0.0.1') && HC::isBlockedIp('169.254.169.254') && HC::isBlockedIp('10.0.0.5'));
 echo "\n$ok passed, $fail failed\n";

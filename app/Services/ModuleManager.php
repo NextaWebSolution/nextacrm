@@ -247,7 +247,7 @@ final class ModuleManager
         if (!$item || !preg_match('#^https://#', (string) $item['download_url'])) {
             throw new HttpException(404, 'Module not found in the marketplace.');
         }
-        $res = (new HttpClient(false, 120, self::MAX_ZIP))->request('GET', (string) $item['download_url']);
+        $res = (new HttpClient(false, 120, self::MAX_ZIP))->requestFollowing('GET', (string) $item['download_url']);
         if ($res['error'] || $res['status'] !== 200) {
             throw new HttpException(502, 'Download failed.');
         }
