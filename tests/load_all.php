@@ -1,6 +1,6 @@
 <?php
 // Loads every class under app/ so signature/compatibility fatals surface even on untested routes.
-define('NX_ROOT', $argv[1] ?? '/home/claude/nextacrm');
+define('NX_ROOT', $argv[1] ?? dirname(__DIR__));
 require NX_ROOT . '/app/bootstrap.php';
 $n = 0; $bad = 0;
 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(NX_ROOT . '/app', FilesystemIterator::SKIP_DOTS));

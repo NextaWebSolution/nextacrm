@@ -1,5 +1,5 @@
 <?php
-define('NX_ROOT', '/home/claude/nextacrm');
+define('NX_ROOT', dirname(__DIR__));
 require NX_ROOT . '/app/bootstrap.php';
 $ok = 0; $fail = 0;
 $t = function (string $name, bool $cond) use (&$ok, &$fail) { echo ($cond ? 'OK   ' : 'FAIL ') . $name . "\n"; $cond ? $ok++ : $fail++; };
@@ -65,15 +65,23 @@ $csv = App\Core\Xlsx::csv(['a'], [['=HYPERLINK("x")'], ['-5'], ['@cmd']]);
 $t('CSV formula injection neutralised', str_contains($csv, "'=HYPERLINK") && str_contains($csv, "'@cmd") && str_contains($csv, "\n-5"));
 // XLSX valid zip
 $x = App\Core\Xlsx::build(['Name', 'Amount'], [['A & B <x>', 10.5]]);
-file_put_contents('/tmp/t.xlsx', $x); $z = new ZipArchive(); $t('XLSX opens as zip', $z->open('/tmp/t.xlsx') === true && $z->locateName('xl/worksheets/sheet1.xml') !== false);
+$tx = sys_get_temp_dir() . '/t.xlsx'; file_put_contents($tx, $x); $z = new ZipArchive(); $t('XLSX opens as zip', $z->open($tx) === true && $z->locateName('xl/worksheets/sheet1.xml') !== false);
 
 // Signature verification of updates
-$sk = base64_decode(trim(file_get_contents('/home/claude/signing.secret')));
+// The real signing key never lives in the repo or CI. A throwaway key must always be rejected;
+// the positive check runs only on the release machine (NEXTA_SIGNING_KEY=/path/to/secret).
 $sha = hash('sha256', 'pkg');
-$sig = base64_encode(sodium_crypto_sign_detached('nextacrm|1.0.1|' . $sha, $sk));
-$t('update signature valid', App\Services\UpdateService::verifySignature('1.0.1', $sha, $sig));
-$t('update signature rejects tampered version', !App\Services\UpdateService::verifySignature('1.0.2', $sha, $sig));
-$t('update signature rejects tampered hash', !App\Services\UpdateService::verifySignature('1.0.1', hash('sha256', 'evil'), $sig));
+$other = sodium_crypto_sign_secretkey(sodium_crypto_sign_keypair());
+$forged = base64_encode(sodium_crypto_sign_detached('nextacrm|1.0.1|' . $sha, $other));
+$t('update signature from another key is rejected', !App\Services\UpdateService::verifySignature('1.0.1', $sha, $forged));
+$t('malformed signature is rejected', !App\Services\UpdateService::verifySignature('1.0.1', $sha, 'not-base64!!'));
+if (($kf = getenv('NEXTA_SIGNING_KEY')) && is_file($kf)) {
+    $sk = base64_decode(trim(file_get_contents($kf)));
+    $sig = base64_encode(sodium_crypto_sign_detached('nextacrm|1.0.1|' . $sha, $sk));
+    $t('update signature valid', App\Services\UpdateService::verifySignature('1.0.1', $sha, $sig));
+    $t('update signature rejects tampered version', !App\Services\UpdateService::verifySignature('1.0.2', $sha, $sig));
+    $t('update signature rejects tampered hash', !App\Services\UpdateService::verifySignature('1.0.1', hash('sha256', 'evil'), $sig));
+}
 
 // Schema compiles for MySQL
 $sql = App\Core\Schema::load()->compile('mysql');
