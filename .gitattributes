@@ -1,0 +1,13 @@
+# Keep developer-only folders out of GitHub's "Download ZIP" and tag archives (git archive).
+# Customers should install from the release ZIP (GitHub Releases / updates.nextawebsolution.com).
+/tests              export-ignore
+/.github            export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+
+# Treat these as binary so diffs stay readable
+*.png   binary
+*.jpg   binary
+*.webp  binary
+*.ttf   binary
+*.zip   binary
