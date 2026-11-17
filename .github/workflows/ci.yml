@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'release/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo, pdo_sqlite, pdo_mysql, sodium, zip, mbstring, intl, gd, curl
+          coverage: none
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 -P4 php -l | (grep -v '^No syntax errors' || true) | tee /tmp/lint.txt; test ! -s /tmp/lint.txt
+      - name: JavaScript syntax
+        run: node --check assets/js/app.js
+      - name: Unit tests
+        run: php tests/unit.php | tee /tmp/unit.txt; tail -1 /tmp/unit.txt | grep -q ' 0 failed'
+      - name: Every class loads
+        run: php tests/load_all.php | tee /tmp/load.txt; tail -1 /tmp/load.txt | grep -q ' 0 problems'
+      - name: No packages, databases or keys committed
+        run: |
+          if git ls-files | grep -iE '\.(zip|sqlite|secret|bundle)$|^config/config\.php$|(^|/)\.env$'; then
+            echo "::error::Release files, databases or secrets must not be committed (ZIPs belong in GitHub Releases)."; exit 1
+          fi

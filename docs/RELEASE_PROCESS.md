@@ -4,6 +4,32 @@ This is the checklist we follow for every NextaCRM release, from a one-line fix 
 
 ---
 
+## The short version: `tools/ship.sh`
+
+After bumping `manifest.json` and adding the `CHANGELOG.md` entry (committed and pushed to `main`):
+
+```bash
+export NEXTA_SIGNING_KEY=~/secure/nextacrm-signing.secret   # offline key, never inside the repo
+export NEXTA_HUB_TOKEN=nxu_…                               # optional: also publish to the update hub
+tools/ship.sh 2.0.3 --dry-run     # checks, tests, builds and signs; publishes nothing
+tools/ship.sh 2.0.3               # tag → GitHub Release with the ZIP → update hub (link)
+```
+
+It refuses to continue if the working tree isn't clean, the branch isn't pushed, the tag already exists, the version or changelog doesn't match, the key is inside the repository, a test fails or the package contains config/database/key files. Pre-releases: `tools/ship.sh 2.1.0-beta.1 --beta`.
+
+### Where things live
+
+| What | Where | Never |
+|---|---|---|
+| Source code | branches (`main`, `release/2.0.x`, feature branches) | ZIPs, databases, keys in commits (CI fails if they appear) |
+| Release ZIP + `latest.json` | the GitHub Release of the tag (`vX.Y.Z`) | replacing or deleting an asset after publishing |
+| What installations download | `https://updates.nextawebsolution.com/nextacrm/…` → redirects to the GitHub asset | branch links such as `archive/refs/heads/main.zip` |
+| Signing key | your machine / password manager | the repository, GitHub Actions secrets, chat |
+
+GitHub's "Download ZIP" of `main` contains only source code (developer folders are excluded by `.gitattributes`); customers install from the release ZIP. CI (`.github/workflows/ci.yml`) runs lint, unit tests and class loading on PHP 8.2–8.4 for every push and pull request. Protect `main` in GitHub → Settings → Branches (require a pull request and the CI check; block force pushes).
+
+The manual steps below are what `ship.sh` automates.
+
 ## 0. Versioning rules
 
 | Change | Example | Version bump |

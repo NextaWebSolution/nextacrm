@@ -34,7 +34,7 @@ if ($pub !== ($manifest['update']['public_key'] ?? '')) {
 // Never package local configuration, data, or dev artefacts.
 $exclude = [
     '#^config/config\.php$#', '#^storage/(?!\.htaccess$|[a-z]+/index\.html$|[a-z]+/?$).+#',
-    '#^dist/#', '#^node_modules/#', '#^\.git/#', '#\.sqlite$#', '#(^|/)\.DS_Store$#', '#^tools/.*\.secret$#', '#signing\.secret$#', '#(^|/)\.env$#', '#(^|/)\.git/#', '#^\.github/workflows/#', '#^tools/smoke-install\.php$#', '#^\.github(/|$)#', '#^modules/(?!\.htaccess$).+#', '#^tests(/|$)#', '#^examples(/|$)#',
+    '#^dist/#', '#^node_modules/#', '#^\.git/#', '#\.sqlite$#', '#(^|/)\.DS_Store$#', '#^tools/.*\.secret$#', '#signing\.secret$#', '#(^|/)\.env$#', '#(^|/)\.git/#', '#^\.github/workflows/#', '#^tools/smoke-install\.php$#', '#^\.github(/|$)#', '#^modules/(?!\.htaccess$).+#', '#^tests(/|$)#', '#^tools/ship\.sh$#', '#^\.gitattributes$#', '#^\.github(/|$)#', '#^examples(/|$)#',
 ];
 @mkdir($out, 0755, true);
 $zipPath = "$out/nextacrm-$version.zip";
