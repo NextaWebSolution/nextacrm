@@ -59,7 +59,7 @@ final class UpdateService
         if (!empty($info['requires_php']) && version_compare(PHP_VERSION, (string) $info['requires_php'], '<')) {
             return ['ok' => false, 'message' => 'This update requires PHP ' . $info['requires_php'] . '.'];
         }
-        $res = (new HttpClient(false, 300, 200 * 1048576))->request('GET', (string) $info['url']);
+        $res = (new HttpClient(false, 300, 200 * 1048576))->requestFollowing('GET', (string) $info['url']);
         if ($res['error'] || $res['status'] !== 200) {
             return ['ok' => false, 'message' => 'Download failed' . ($res['error'] ? ': ' . $res['error'] : '')];
         }

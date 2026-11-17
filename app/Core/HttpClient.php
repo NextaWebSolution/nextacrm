@@ -10,7 +10,7 @@ defined('NX_ROOT') || exit;
  *  - http/https only, default ports or explicit allow
  *  - DNS is resolved first; private, loopback, link-local, multicast and reserved ranges are refused
  *  - the vetted IP is pinned with CURLOPT_RESOLVE so a second DNS answer cannot change the target
- *  - redirects disabled, short timeouts, response size cap
+ *  - redirects not followed by request(); requestFollowing() re-checks every hop; short timeouts, response size cap
  */
 final class HttpClient
 {
@@ -85,6 +85,59 @@ final class HttpClient
         $error = $ok === false ? (curl_error($ch) ?: 'Request failed') : null;
         curl_close($ch);
         return ['status' => $status, 'body' => $buffer, 'headers' => $respHeaders, 'error' => $error];
+    }
+
+    /**
+     * Like request(), but follows redirects (GitHub release and archive downloads always redirect).
+     * Every hop goes through request() again, so each new host is resolved, checked against the
+     * private/reserved IP block list and pinned. HTTPS → HTTP downgrades are refused.
+     */
+    public function requestFollowing(string $method, string $url, array $headers = [], int $maxHops = 5): array
+    {
+        for ($hop = 0; $hop <= $maxHops; $hop++) {
+            $res = $this->request($method, $url, $headers);
+            $loc = $res['headers']['location'] ?? '';
+            if ($res['error'] !== null || !in_array($res['status'], [301, 302, 303, 307, 308], true) || $loc === '') {
+                return $res + ['final_url' => $url];
+            }
+            $next = self::absoluteUrl($url, $loc);
+            if ($next === null) {
+                return ['status' => 0, 'body' => '', 'headers' => [], 'error' => 'Invalid redirect.', 'final_url' => $url];
+            }
+            if (str_starts_with(strtolower($url), 'https://') && !str_starts_with(strtolower($next), 'https://')) {
+                return ['status' => 0, 'body' => '', 'headers' => [], 'error' => 'Refused a redirect from HTTPS to HTTP.', 'final_url' => $url];
+            }
+            if ($res['status'] === 303) {
+                $method = 'GET';
+            }
+            $url = $next;
+        }
+        return ['status' => 0, 'body' => '', 'headers' => [], 'error' => 'Too many redirects.', 'final_url' => $url];
+    }
+
+    /** Resolves a Location header against the URL that returned it. */
+    public static function absoluteUrl(string $base, string $location): ?string
+    {
+        $location = trim($location);
+        if ($location === '' || preg_match('/[\x00-\x1f\s]/', $location)) {
+            return null;
+        }
+        if (preg_match('#^https?://#i', $location)) {
+            return $location;
+        }
+        $b = parse_url($base);
+        if (!$b || empty($b['scheme']) || empty($b['host'])) {
+            return null;
+        }
+        $origin = $b['scheme'] . '://' . $b['host'] . (isset($b['port']) ? ':' . $b['port'] : '');
+        if (str_starts_with($location, '//')) {
+            return $b['scheme'] . ':' . $location;
+        }
+        if (str_starts_with($location, '/')) {
+            return $origin . $location;
+        }
+        $dir = rtrim(substr((string) ($b['path'] ?? '/'), 0, (int) strrpos((string) ($b['path'] ?? '/'), '/') + 1), '/');
+        return $origin . $dir . '/' . $location;
     }
 
     private function resolve(string $host): array
